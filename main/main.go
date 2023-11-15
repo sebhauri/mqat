@@ -25,7 +25,19 @@ func main() {
 			println("\t New key pair is nil at iteration", i)
 		}
 	}
-	time := time.Since(start)
-	fmt.Printf("\t Time elapsed: %dms\n", time.Milliseconds())
-	fmt.Printf("\t Mean time per key generation: %.3fms\n", float64(time.Milliseconds())/200)
+	end := time.Since(start)
+	fmt.Printf("\t Time elapsed: %dms\n", end.Milliseconds())
+	fmt.Printf("\t Mean time per key generation: %.3fms\n", float64(end.Milliseconds())/200)
+
+	println("Benchmarking signature..")
+	start = time.Now()
+	for i := 0; i < MEASURE_ROUNDS; i++ {
+		sig := mbss.Sign("Hey, this is my message to sign...", kp.S)
+		if sig == nil {
+			println("\t Signature is nil at iteration", i)
+		}
+	}
+	end = time.Since(start)
+	fmt.Printf("\t Time elapsed: %.3fs\n", end.Seconds())
+	fmt.Printf("\t Mean time per signature %.3fms\n", float64(end.Milliseconds())/200)
 }

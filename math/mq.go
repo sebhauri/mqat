@@ -10,6 +10,26 @@ func MQ(F []Gf31s, x []Gf31, m uint8) []Gf31 {
 	return fx
 }
 
+func G(F []Gf31s, x []Gf31, y []Gf31, m uint8) []Gf31 {
+	var n int
+	if n = len(x); n != len(y) {
+		return nil
+	}
+	gx := make([]Gf31, m)
+	fx := MQ(F, x, m)
+	fy := MQ(F, y, m)
+	xy := make([]Gf31, n)
+	for i := 0; i < n; i++ {
+		xy[i] = Mod31(x[i] + y[i])
+	}
+	fxy := MQ(F, xy, m)
+	var i uint8
+	for i = 0; i < m; i++ {
+		gx[i] = Mod31(fxy[i] + fx[i] + fy[i])
+	}
+	return gx
+}
+
 func mqi(Fi []Gf31s, xij []Gf31) Gf31 {
 	flen := len(Fi)
 	var fi int = 0

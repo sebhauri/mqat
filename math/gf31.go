@@ -11,28 +11,28 @@ type Gf31s int16
 func Mod31(x Gf31) Gf31 {
 	var t Gf31
 
-	t = x & 31
+	t = x & constants.Q
 	x >>= 5
-	t += x & 31
+	t += x & constants.Q
 	x >>= 5
-	t += x & 31
+	t += x & constants.Q
 	x >>= 5
-	t += x & 31
+	t += x & constants.Q
 	x >>= 5
-	t = (t >> 5) + (t & 31)
-	t = (t >> 5) + (t & 31)
-	if t != 31 {
+	t = (t >> 5) + (t & constants.Q)
+	t = (t >> 5) + (t & constants.Q)
+	if t != constants.Q {
 		return t
 	}
 	return 0
 }
 
-func Gf31_nrand(n uint8, seed []byte) []Gf31 {
+func Gf31_nrand(n uint, seed []byte) []Gf31 {
 	out := make([]Gf31, n)
 	shake128 := sha3.NewShake128()
 	shakeBlock := make([]byte, shake128.BlockSize())
 	shake128.Write(seed)
-	var i uint8
+	var i uint
 	for i = 0; i < n; {
 		_, err := shake128.Read(shakeBlock)
 		if err != nil {
