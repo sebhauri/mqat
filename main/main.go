@@ -32,7 +32,7 @@ func main() {
 	println("Benchmarking signature..")
 	start = time.Now()
 	for i := 0; i < MEASURE_ROUNDS; i++ {
-		sig := mbss.Sign("Hey, this is my message to sign...", kp.S)
+		sig := mbss.Sign([]byte("Hey, this is my message to sign..."), kp.S)
 		if sig == nil {
 			println("\t Signature is nil at iteration", i)
 		}

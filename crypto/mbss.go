@@ -54,13 +54,13 @@ func (mbss *MBSS) KeyPair() *KeyPair {
 	return kp
 }
 
-func (mbss *MBSS) Sign(message string, sk SecretKey) Signature {
+func (mbss *MBSS) Sign(message Message, sk SecretKey) Signature {
 	F := math.Gf31_nrand_signed(mbss.flen, sk.seed)
 	if F == nil {
 		return nil
 	}
-	C := h(append(sk.sk, []byte(message)...))
-	D := h(append(C[:], []byte(message)...))
+	C := h(append(sk.sk, message...))
+	D := h(append(C[:], message...))
 
 	r0t0e0 := math.Gf31_nrand((2*uint(mbss.n)+uint(mbss.m))*uint(mbss.r), append(sk.sk, D[:]...))
 	r0 := r0t0e0[:uint(mbss.r)*uint(mbss.n)]
@@ -130,9 +130,18 @@ func (mbss *MBSS) Sign(message string, sk SecretKey) Signature {
 	if err != nil {
 		return nil
 	}
-	sig := append(c, append(sigma0[:], append(sigma1_bytes, sigma2_bytes...)...)...)
+	sig := append(C[:], append(sigma0[:], append(sigma1_bytes, sigma2_bytes...)...)...)
 	return sig
 }
+
+func (mbss *MBSS) Verify(message Message, sig Signature, pk PublicKey) bool {
+
+	return true
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helpers
+////////////////////////////////////////////////////////////////////////////////
 
 func com0(r0, t0, e0 []math.Gf31) []byte {
 	m, err := json.Marshal(append(r0, append(t0, e0...)...))
