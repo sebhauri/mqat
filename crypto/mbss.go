@@ -110,15 +110,25 @@ func (mbss *MBSS) Sign(message Message, sk SecretKey) Signature {
 	h1 := sha3.NewShake128()
 	h1.Write(append(h0, sigma1_bytes...))
 	shakeBlock := make([]byte, h1.BlockSize())
-	sigma2 := make([]math.Gf31, uint(mbss.r)*uint(mbss.n))
+	sigma2 := make([]byte, uint(mbss.r)*(uint(mbss.n)+constants.HASH_BYTES))
 	for i := 0; i < int(mbss.r); i++ {
 		h1.Read(shakeBlock)
 		for _, v := range shakeBlock {
 			b := v & 1
 			if b == 0 {
-				sigma2 = append(sigma2, r0[i*int(mbss.n):(i+1)*int(mbss.n)]...)
+				r0_bytes, err := json.Marshal(r0[i*int(mbss.n) : (i+1)*int(mbss.n)])
+				if err != nil {
+					return nil
+				}
+				sigma2 = append(sigma2, r0_bytes...)
+				sigma2 = append(sigma2, c[constants.HASH_BYTES*(2*i+1)])
 			} else {
-				sigma2 = append(sigma2, r1[i*int(mbss.n):(i+1)*int(mbss.n)]...)
+				r1_bytes, err := json.Marshal(r0[i*int(mbss.n) : (i+1)*int(mbss.n)])
+				if err != nil {
+					return nil
+				}
+				sigma2 = append(sigma2, r1_bytes...)
+				sigma2 = append(sigma2, c[constants.HASH_BYTES*(2*i)])
 			}
 			i++
 			if i >= int(mbss.r) {
@@ -126,11 +136,8 @@ func (mbss *MBSS) Sign(message Message, sk SecretKey) Signature {
 			}
 		}
 	}
-	sigma2_bytes, err := json.Marshal(sigma1)
-	if err != nil {
-		return nil
-	}
-	sig := append(C[:], append(sigma0[:], append(sigma1_bytes, sigma2_bytes...)...)...)
+
+	sig := append(C[:], append(sigma0[:], append(sigma1_bytes, sigma2...)...)...)
 	return sig
 }
 
