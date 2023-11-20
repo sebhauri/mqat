@@ -1,15 +1,16 @@
 package math
 
 import (
+	"bytes"
+
 	"golang.org/x/crypto/sha3"
 	constants "sebastienhauri.ch/mqt/const"
 )
 
-type Gf31 uint16
-type Gf31s int16
+type Gf31s int8
 
-func Mod31(x Gf31) Gf31 {
-	var t Gf31
+func Mod31(x uint16) uint8 {
+	var t uint16
 
 	t = x & constants.Q
 	x >>= 5
@@ -22,16 +23,16 @@ func Mod31(x Gf31) Gf31 {
 	t = (t >> 5) + (t & constants.Q)
 	t = (t >> 5) + (t & constants.Q)
 	if t != constants.Q {
-		return t
+		return uint8(t)
 	}
 	return 0
 }
 
-func Gf31_nrand(n uint, seed []byte) []Gf31 {
-	out := make([]Gf31, n)
+func Gf31_nrand(n uint, seed []byte) []uint8 {
+	out := make([]uint8, n)
 	shake128 := sha3.NewShake128()
 	shakeBlock := make([]byte, shake128.BlockSize())
-	shake128.Write(seed)
+	shake128.Write(bytes.Clone(seed))
 	var i uint
 	for i = 0; i < n; {
 		_, err := shake128.Read(shakeBlock)
@@ -40,7 +41,7 @@ func Gf31_nrand(n uint, seed []byte) []Gf31 {
 		}
 		for _, v := range shakeBlock {
 			if (v & constants.Q) != constants.Q {
-				out[i] = Gf31(v & constants.Q)
+				out[i] = uint8(v & constants.Q)
 				i++
 				if i >= n {
 					break
@@ -55,7 +56,7 @@ func Gf31_nrand_signed(n uint, seed []byte) []Gf31s {
 	out := make([]Gf31s, n)
 	shake128 := sha3.NewShake128()
 	shakeBlock := make([]byte, shake128.BlockSize()/8)
-	shake128.Write(seed)
+	shake128.Write(bytes.Clone(seed))
 	var i uint
 	for i = 0; i < n; {
 		_, err := shake128.Read(shakeBlock)
