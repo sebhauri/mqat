@@ -1,8 +1,8 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/rand"
-	"encoding/json"
 
 	"golang.org/x/crypto/sha3"
 	constants "sebastienhauri.ch/mqt/const"
@@ -10,8 +10,8 @@ import (
 )
 
 type MBSS struct {
-	n, m uint8
-	r    uint16
+	N, M uint8
+	R    uint16
 	flen uint
 }
 
@@ -20,9 +20,9 @@ func NewMBSS(m, n uint8) *MBSS {
 		return nil
 	}
 	mqt := new(MBSS)
-	mqt.m = m
-	mqt.n = n
-	mqt.r = 269 //TODO: See what we can do better with this.
+	mqt.M = m
+	mqt.N = n
+	mqt.R = 269 //TODO: See what we can do better with this.
 	mqt.flen = (uint(n)*uint((n+1))/2 + uint(n)) * uint(m)
 	return mqt
 }
@@ -42,11 +42,11 @@ func (mbss *MBSS) KeyPair() *KeyPair {
 	if F == nil {
 		return nil
 	}
-	sk_gf31 := math.Gf31_nrand(uint(mbss.n), kp.S.sk)
+	sk_gf31 := math.Gf31_nrand(uint(mbss.N), kp.S.sk)
 	if sk_gf31 == nil {
 		return nil
 	}
-	pk_gf31 := math.MQ(F, sk_gf31, mbss.m)
+	pk_gf31 := math.MQ(F, sk_gf31, mbss.M)
 	if pk_gf31 == nil {
 		return nil
 	}
@@ -59,115 +59,165 @@ func (mbss *MBSS) Sign(message Message, sk SecretKey) Signature {
 	if F == nil {
 		return nil
 	}
-	C := h(append(sk.sk, message...))
-	D := h(append(C[:], message...))
+	tohash := append(sk.sk, message...)
+	C := h(tohash)
+	tohash = append(C[:], message...)
+	D := h(tohash)
+	seed := append(sk.sk, D[:]...)
+	r0t0e0 := math.Gf31_nrand((2*uint(mbss.N)+uint(mbss.M))*uint(mbss.R), seed)
+	r0 := r0t0e0[:uint(mbss.R)*uint(mbss.N)]
+	r1 := make([]uint8, len(r0))
+	t0 := r0t0e0[uint(mbss.R)*uint(mbss.N) : 2*uint(mbss.R)*uint(mbss.N)]
+	t1 := make([]uint8, len(t0))
+	e0 := r0t0e0[2*uint(mbss.R)*uint(mbss.N):]
+	e1 := make([]uint8, len(e0))
+	G := make([]uint8, 0)
 
-	r0t0e0 := math.Gf31_nrand((2*uint(mbss.n)+uint(mbss.m))*uint(mbss.r), append(sk.sk, D[:]...))
-	r0 := r0t0e0[:uint(mbss.r)*uint(mbss.n)]
-	r1 := make([]math.Gf31, len(r0))
-	t0 := r0t0e0[uint(mbss.r)*uint(mbss.n) : 2*uint(mbss.r)*uint(mbss.n)]
-	t1 := make([]math.Gf31, len(t0))
-	e0 := r0t0e0[2*uint(mbss.r)*uint(mbss.n):]
-	e1 := make([]math.Gf31, len(e0))
-	G := make([]math.Gf31, uint(mbss.m)*uint(mbss.r))
-	sk_gf31 := math.Gf31_nrand(uint(mbss.n), sk.sk)
-	for i := 0; i < int(mbss.r); i++ {
-		for j := 0; j < int(mbss.n); j++ {
-			r1[j+i*int(mbss.n)] = math.Mod31(sk_gf31[j] - r0[j+i*int(mbss.n)])
+	sk_gf31 := math.Gf31_nrand(uint(mbss.N), sk.sk)
+	for i := 0; i < int(mbss.R); i++ {
+		for j := 0; j < int(mbss.N); j++ {
+			r1ij := int(sk_gf31[j]) - int(r0[j+i*int(mbss.N)])
+			r1[j+i*int(mbss.N)] = math.Mod31(uint16((r1ij >> 15) + (r1ij & 0x7FFF)))
 		}
-		G = append(G, math.G(F, t0[i*int(mbss.n):(i+1)*int(mbss.n)], r1[i*int(mbss.n):(i+1)*int(mbss.n)], mbss.m)...)
+		G = append(G, math.G(F, t0[i*int(mbss.N):(i+1)*int(mbss.N)], r1[i*int(mbss.N):(i+1)*int(mbss.N)], mbss.M)...)
 	}
-	for i := 0; i < int(mbss.r)*int(mbss.m); i++ {
-		G[i] = math.Mod31(G[i] + e0[i])
+	for i := 0; i < int(mbss.R)*int(mbss.M); i++ {
+		gi := int(G[i]) + int(e0[i])
+		G[i] = math.Mod31(uint16((gi >> 15) + (gi & 0x7FFF)))
 	}
 
-	c := make([]byte, 2*constants.HASH_BYTES*mbss.r)
-	for i := 0; i < int(mbss.r); i++ {
-		c = append(c, com0(r0[i*int(mbss.n):(i+1)*int(mbss.n)], t0[i*int(mbss.n):(i+1)*int(mbss.n)], e0[i*int(mbss.m):(i+1)*int(mbss.m)])...)
-		c = append(c, com1(r1[i*int(mbss.n):(i+1)*int(mbss.n)], G[i*int(mbss.m):(i+1)*int(mbss.m)])...)
+	c := make([]byte, 0)
+	for i := 0; i < int(mbss.R); i++ {
+		c = append(c, com0(r0[i*int(mbss.N):(i+1)*int(mbss.N)], t0[i*int(mbss.N):(i+1)*int(mbss.N)], e0[i*int(mbss.M):(i+1)*int(mbss.M)])...)
+		c = append(c, com1(r1[i*int(mbss.N):(i+1)*int(mbss.N)], G[i*int(mbss.M):(i+1)*int(mbss.M)])...)
 	}
 	sigma0 := h(c)
 	h0 := append(D[:], sigma0[:]...)
 
-	alphas := math.Gf31_nrand(uint(mbss.r), h0)
-	for i := 0; i < int(mbss.r); i++ {
-		for j := 0; j < int(mbss.n); j++ {
-			t1ij := int(alphas[i])*int(r0[i*int(mbss.n)+j]) - int(t0[i*int(mbss.n)+j])
-			t1[i*int(mbss.n)+j] = math.Mod31(math.Gf31((t1ij >> 15) + (t1ij & 0x7FFF)))
+	alphas := math.Gf31_nrand(uint(mbss.R), h0)
+	for i := 0; i < int(mbss.R); i++ {
+		for j := 0; j < int(mbss.N); j++ {
+			t1ij := int(alphas[i])*int(r0[i*int(mbss.N)+j]) - int(t0[i*int(mbss.N)+j])
+			t1[i*int(mbss.N)+j] = math.Mod31(uint16((t1ij >> 15) + (t1ij & 0x7FFF)))
 		}
-		e1 = append(e1, math.MQ(F, r0[i*int(mbss.n):(i+1)*int(mbss.n)], mbss.m)...)
-		for j := 0; j < int(mbss.m); j++ {
-			e1ij := int(alphas[i]) * int(e1[i*int(mbss.m)+j])
-			e1ij -= int(e0[i*int(mbss.m)+j])
-			e1[i*int(mbss.m)+j] = math.Mod31(math.Gf31((e1ij >> 15) + (e1ij & 0x7FFF)))
+		Fr0 := math.MQ(F, r0[i*int(mbss.N):(i+1)*int(mbss.N)], mbss.M)
+		for j := 0; j < int(mbss.M); j++ {
+			e1ij := int(alphas[i])*int(Fr0[j]) - int(e0[i*int(mbss.M)+j])
+			e1[i*int(mbss.M)+j] = math.Mod31(uint16((e1ij >> 15) + (e1ij & 0x7FFF)))
 		}
 	}
 	sigma1 := append(t1, e1...)
-	sigma1_bytes, err := json.Marshal(sigma1)
-	if err != nil {
-		return nil
-	}
 	h1 := sha3.NewShake128()
-	h1.Write(append(h0, sigma1_bytes...))
+	tohash = append(h0, sigma1...)
+	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
-	sigma2 := make([]byte, uint(mbss.r)*(uint(mbss.n)+constants.HASH_BYTES))
-	for i := 0; i < int(mbss.r); i++ {
+	sigma2 := make([]byte, 0)
+	for i := 0; i < int(mbss.R); {
 		h1.Read(shakeBlock)
 		for _, v := range shakeBlock {
 			b := v & 1
 			if b == 0 {
-				r0_bytes, err := json.Marshal(r0[i*int(mbss.n) : (i+1)*int(mbss.n)])
-				if err != nil {
-					return nil
-				}
-				sigma2 = append(sigma2, r0_bytes...)
-				sigma2 = append(sigma2, c[constants.HASH_BYTES*(2*i+1)])
+				sigma2 = append(sigma2, r0[i*int(mbss.N):(i+1)*int(mbss.N)]...)
+				sigma2 = append(sigma2, c[constants.HASH_BYTES*(2*i+1):constants.HASH_BYTES*(2*(i+1))]...)
 			} else {
-				r1_bytes, err := json.Marshal(r0[i*int(mbss.n) : (i+1)*int(mbss.n)])
-				if err != nil {
-					return nil
-				}
-				sigma2 = append(sigma2, r1_bytes...)
-				sigma2 = append(sigma2, c[constants.HASH_BYTES*(2*i)])
+				sigma2 = append(sigma2, r1[i*int(mbss.N):(i+1)*int(mbss.N)]...)
+				sigma2 = append(sigma2, c[constants.HASH_BYTES*(2*i):constants.HASH_BYTES*(2*i+1)]...)
 			}
 			i++
-			if i >= int(mbss.r) {
+			if i >= int(mbss.R) {
 				break
 			}
 		}
 	}
-
-	sig := append(C[:], append(sigma0[:], append(sigma1_bytes, sigma2...)...)...)
+	sig := append(C[:], sigma0[:]...)
+	sig = append(sig, sigma1...)
+	sig = append(sig, sigma2...)
 	return sig
 }
 
 func (mbss *MBSS) Verify(message Message, sig Signature, pk PublicKey) bool {
+	F := math.Gf31_nrand_signed(mbss.flen, pk.seed)
+	C := bytes.Clone(sig[:constants.HASH_BYTES])
+	tohash := append(C, message...)
+	D := h(tohash)
 
-	return true
+	sigma0 := bytes.Clone(sig[constants.HASH_BYTES : 2*constants.HASH_BYTES])
+	offset := 2*constants.HASH_BYTES + uint(mbss.R)*(uint(mbss.M)+uint(mbss.N))
+	sigma1 := bytes.Clone(sig[2*constants.HASH_BYTES : offset])
+	sigma2 := bytes.Clone(sig[offset:])
+
+	h0 := append(D[:], sigma0...)
+	alphas := math.Gf31_nrand(uint(mbss.R), h0)
+	h1 := sha3.NewShake128()
+	tohash = append(h0, sigma1...)
+	h1.Write(tohash)
+	shakeBlock := make([]byte, h1.BlockSize())
+	c := make([]byte, 0)
+	for i := 0; i < int(mbss.R); {
+		h1.Read(shakeBlock)
+		for _, v := range shakeBlock {
+			r_offset := i * (int(mbss.N) + constants.HASH_BYTES)
+			c_offset := r_offset + int(mbss.N)
+			r_ch := bytes.Clone(sigma2[r_offset:c_offset])
+			c_ch := bytes.Clone(sigma2[c_offset : c_offset+constants.HASH_BYTES])
+			t_offset := i * int(mbss.N)
+			t1 := sigma1[t_offset : t_offset+int(mbss.N)]
+			e_offset := int(mbss.R)*int(mbss.N) + i*int(mbss.M)
+			e1 := sigma1[e_offset : e_offset+int(mbss.M)]
+
+			b := v & 1
+			if b == 0 {
+				x := make([]uint8, mbss.N)
+				for j := 0; j < int(mbss.N); j++ {
+					xj := int(alphas[i])*int(r_ch[j]) - int(t1[j])
+					x[j] = math.Mod31(uint16((xj >> 15) + (xj & 0x7FFF)))
+				}
+				y := math.MQ(F, r_ch, mbss.M)
+				for j := 0; j < int(mbss.M); j++ {
+					yj := int(alphas[i])*int(y[j]) - int(e1[j])
+					y[j] = math.Mod31(uint16((yj >> 15) + (yj & 0x7FFF)))
+				}
+				c0 := com0(r_ch, x, y)
+				c = append(c, c0...)
+				c = append(c, c_ch...)
+			} else {
+				y := math.MQ(F, r_ch, mbss.M)
+				z := math.G(F, r_ch, t1, mbss.M)
+				for j := 0; j < int(mbss.M); j++ {
+					yj := int(alphas[i])*(int(pk.v[j])-int(y[j])) - int(z[j]) - int(e1[j])
+					y[j] = math.Mod31(uint16((yj >> 15) + (yj & 0x7FFF)))
+				}
+				c = append(c, c_ch...)
+				c1 := com1(r_ch, y)
+				c = append(c, c1...)
+			}
+			i++
+			if i >= int(mbss.R) {
+				break
+			}
+		}
+	}
+	sigma0_prime := h(c)
+	return bytes.Equal(sigma0, sigma0_prime[:])
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-func com0(r0, t0, e0 []math.Gf31) []byte {
-	m, err := json.Marshal(append(r0, append(t0, e0...)...))
-	if err != nil {
-		return nil
-	}
-	digest := sha3.Sum256(m)
+func com0(r0, t0, e0 []uint8) []byte {
+	tmp := append(bytes.Clone(t0), bytes.Clone(e0)...)
+	m := append(bytes.Clone(r0), tmp...)
+	digest := sha3.Sum256(bytes.Clone(m))
 	return digest[:]
 }
 
-func com1(r1, gx []math.Gf31) []byte {
-	m, err := json.Marshal(append(r1, gx...))
-	if err != nil {
-		return nil
-	}
-	digest := sha3.Sum256(m)
+func com1(r1, gx []uint8) []byte {
+	m := append(bytes.Clone(r1), bytes.Clone(gx)...)
+	digest := sha3.Sum256(bytes.Clone(m))
 	return digest[:]
 }
 
 func h(data []byte) [constants.HASH_BYTES]byte {
-	return sha3.Sum256(data)
+	return sha3.Sum256(bytes.Clone(data))
 }
