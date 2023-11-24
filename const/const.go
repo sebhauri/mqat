@@ -7,4 +7,5 @@ const HASH_BYTES = 32
 const MEASURE_ROUNDS = 200
 const M = 64
 const N = 64
+const R = 277
 const FLEN = M * (N*(N+1)/2 + N)

@@ -15,14 +15,14 @@ type MQDSS struct {
 	flen uint
 }
 
-func NewMQDSS(m, n uint8) *MQDSS {
+func NewMQDSS(m, n uint8, r uint16) *MQDSS {
 	if m > n {
 		return nil
 	}
 	mqdss := new(MQDSS)
 	mqdss.M = m
 	mqdss.N = n
-	mqdss.R = 269 //TODO: See what we can do better with this.
+	mqdss.R = r //TODO: See what we can do better with this.
 	mqdss.flen = (uint(n)*uint((n+1))/2 + uint(n)) * uint(m)
 	return mqdss
 }

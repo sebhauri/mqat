@@ -10,7 +10,7 @@ import (
 
 func main() {
 	fmt.Printf("Initialising an MBSS with m=%d and n=%d ..\n", constants.M, constants.N)
-	mqdss := crypto.NewMQDSS(constants.M, constants.N)
+	mqdss := crypto.NewMQDSS(constants.M, constants.N, constants.R)
 	fmt.Printf("The number of measure rounds is set to %d.\n\n", constants.MEASURE_ROUNDS)
 
 	var kp *crypto.KeyPair
