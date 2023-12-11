@@ -6,18 +6,14 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-type Gf256 uint8
-
-// type Gf256s int8
-
-func IsNonZero(a Gf256) bool {
+func IsNonZero(a uint8) bool {
 	a8 := a
 	r := 0 - a8
 	r >>= 8
 	return (r & 1) == 1
 }
 
-func Mul(a, b Gf256) Gf256 {
+func Mul(a, b uint8) uint8 {
 	r := a * (b & 1)
 
 	a = (a << 1) ^ ((a >> 7) * 0x1b)
@@ -37,7 +33,7 @@ func Mul(a, b Gf256) Gf256 {
 	return r
 }
 
-func Square(a Gf256) Gf256 {
+func Square(a uint8) uint8 {
 	r8 := a & 1
 	r8 ^= (a << 1) & 4
 	r8 ^= (a << 2) & (1 << 4)
@@ -51,7 +47,7 @@ func Square(a Gf256) Gf256 {
 	return r8
 }
 
-func Inv(a Gf256) Gf256 {
+func Inv(a uint8) uint8 {
 	a2 := Square(a)
 	a4 := Square(a2)
 	a8 := Square(a4)
@@ -65,11 +61,11 @@ func Inv(a Gf256) Gf256 {
 	return Mul(a2, a128_)
 }
 
-func Nrand(n int, seed []byte) []Gf256 {
+func Nrand(n int, seed []byte) []uint8 {
 	if n <= 0 {
 		return nil
 	}
-	out := make([]Gf256, n)
+	out := make([]uint8, n)
 	shake128 := sha3.NewShake128()
 	shakeBlock := make([]uint8, shake128.BlockSize())
 	shake128.Write(bytes.Clone(seed))
@@ -79,7 +75,7 @@ func Nrand(n int, seed []byte) []Gf256 {
 			return nil
 		}
 		for _, v := range shakeBlock {
-			out[i] = Gf256(v)
+			out[i] = uint8(v)
 			i++
 			if i >= n {
 				break
@@ -90,11 +86,11 @@ func Nrand(n int, seed []byte) []Gf256 {
 	return out
 }
 
-// func NrandSigned(n int, seed []byte) []Gf256s {
+// func NrandSigned(n int, seed []byte) []uint8$s {
 // 	if n <= 0 {
 // 		return nil
 // 	}
-// 	out := make([]Gf256s, n)
+// 	out := make([]uint8$s, n)
 // 	shake128 := sha3.NewShake128()
 // 	shakeBlock := make([]uint8, shake128.BlockSize()/8)
 // 	shake128.Write(bytes.Clone(seed))
@@ -104,7 +100,7 @@ func Nrand(n int, seed []byte) []Gf256 {
 // 			return nil
 // 		}
 // 		for _, v := range shakeBlock {
-// 			out[i] = Gf256s(v)
+// 			out[i] = uint8$s(v)
 // 			i++
 // 			if i >= n {
 // 				break

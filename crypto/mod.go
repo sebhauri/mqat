@@ -1,10 +1,8 @@
 package crypto
 
-import "sebastienhauri.ch/mqt/math"
-
 type PublicKey struct {
 	seed []byte
-	v    []math.Gf256
+	v    []uint8
 }
 type SecretKey struct {
 	sk   []byte

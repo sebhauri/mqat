@@ -23,7 +23,7 @@ func NewMQDSS(m, n, r int) *MQDSS {
 	mqdss.M = m
 	mqdss.N = n
 	mqdss.R = r
-	mqdss.flen = n*(n+1)/2 + n*m
+	mqdss.flen = (n*(n+1)/2 + n) * m
 	return mqdss
 }
 
@@ -66,12 +66,12 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	seed := append(sk.sk, D[:]...)
 	r0t0e0 := math.Nrand((2*mqdss.N+mqdss.M)*mqdss.R, seed)
 	r0 := r0t0e0[:mqdss.R*mqdss.N]
-	r1 := make([]math.Gf256, len(r0))
+	r1 := make([]uint8, len(r0))
 	t0 := r0t0e0[uint(mqdss.R)*uint(mqdss.N) : 2*uint(mqdss.R)*uint(mqdss.N)]
-	t1 := make([]math.Gf256, len(t0))
+	t1 := make([]uint8, len(t0))
 	e0 := r0t0e0[2*uint(mqdss.R)*uint(mqdss.N):]
-	e1 := make([]math.Gf256, len(e0))
-	G := make([]math.Gf256, 0)
+	e1 := make([]uint8, len(e0))
+	G := make([]uint8, 0)
 
 	sk_gf31 := math.Nrand(mqdss.N, sk.sk)
 	for i := 0; i < mqdss.R; i++ {
@@ -167,14 +167,14 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 
 			b := v & 1
 			if b == 0 {
-				x := make([]math.Gf256, mqdss.N)
+				x := make([]uint8, mqdss.N)
 				for j := 0; j < mqdss.N; j++ {
-					xj := math.Mul(alphas[i], math.Gf256(r_ch[j])) - math.Gf256(t1[j])
+					xj := math.Mul(alphas[i], uint8(r_ch[j])) - uint8(t1[j])
 					x[j] = xj
 				}
 				y := math.MQ(F, r_ch, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := math.Mul(alphas[i], y[j]) - math.Gf256(e1[j])
+					yj := math.Mul(alphas[i], y[j]) - uint8(e1[j])
 					y[j] = yj
 				}
 				c0 := com0(r_ch, x, y)
@@ -184,7 +184,7 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 				y := math.MQ(F, r_ch, mqdss.M)
 				z := math.G(F, r_ch, t1, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := math.Mul(alphas[i], math.Mul(pk.v[j], y[j])) - z[j] - math.Gf256(e1[j])
+					yj := math.Mul(alphas[i], math.Mul(pk.v[j], y[j])) - z[j] - uint8(e1[j])
 					y[j] = yj
 				}
 				c = append(c, c_ch...)
@@ -205,14 +205,14 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-func com0(r0, t0, e0 []math.Gf256) []byte {
+func com0(r0, t0, e0 []uint8) []byte {
 	tmp := append(bytes.Clone(t0), bytes.Clone(e0)...)
 	m := append(bytes.Clone(r0), tmp...)
 	digest := sha3.Sum256(bytes.Clone(m))
 	return digest[:]
 }
 
-func com1(r1, gx []math.Gf256) []byte {
+func com1(r1, gx []uint8) []byte {
 	m := append(bytes.Clone(r1), bytes.Clone(gx)...)
 	digest := sha3.Sum256(bytes.Clone(m))
 	return digest[:]
