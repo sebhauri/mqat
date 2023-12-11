@@ -80,7 +80,7 @@ func TestCorrectness(t *testing.T) {
 	for i := 0; i < constants.M; i++ {
 		gi := math.Mul(alpha[0], v[i]-Fr1[i]) - Gr1t1[i] - e1[i]
 		if gi != G[i] {
-			t.Errorf("%d != %d*(%d - %d) - %d - %d (= %d)", G[i], alpha[0], v[i], Fr1[i], Gr1t1[i], e1[i], gi)
+			t.Errorf("%d) %d != %d*(%d - %d) - %d - %d (= %d)", i, G[i], alpha[0], v[i], Fr1[i], Gr1t1[i], e1[i], gi)
 			return
 		}
 	}

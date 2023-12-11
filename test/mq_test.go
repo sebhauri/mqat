@@ -77,8 +77,8 @@ func TestG(t *testing.T) {
 	t.Logf("gxy=%v", gxy)
 
 	for i := 0; i < constants.M; i++ {
-		tmp := (int(fxplusy[i]) - int(fx[i]) - int(fy[i]) + 62) % 31
-		if int(gxy[i]) != tmp {
+		tmp := fxplusy[i] - fx[i] - fy[i]
+		if gxy[i] != tmp {
 			t.Errorf("%d) %d = %d - %d - %d != %d ", i, tmp, fxplusy[i], fx[i], fy[i], gxy[i])
 			return
 		}
