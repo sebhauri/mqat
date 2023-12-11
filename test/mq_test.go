@@ -41,7 +41,7 @@ func TestMQ(t *testing.T) {
 	for i := 0; i < constants.M; i++ {
 		var fxi uint8 = 0
 		for j := 0; j < filen+constants.N; j++ {
-			fxi += math.Mul(xijxi[j], F2[i*(filen+constants.N)+j])
+			fxi ^= math.Mul(xijxi[j], F2[i*(filen+constants.N)+j])
 		}
 		fx2[i] = fxi
 	}
@@ -66,7 +66,7 @@ func TestG(t *testing.T) {
 	fy := math.MQ(F, y, constants.M)
 	xplusy := make([]uint8, constants.N)
 	for i := 0; i < constants.N; i++ {
-		xplusy[i] = x[i] + y[i]
+		xplusy[i] = x[i] ^ y[i]
 	}
 	fxplusy := math.MQ(F, xplusy[:], constants.M)
 	gxy := math.G(F, x, y, constants.M)
@@ -77,7 +77,7 @@ func TestG(t *testing.T) {
 	t.Logf("gxy=%v", gxy)
 
 	for i := 0; i < constants.M; i++ {
-		tmp := fxplusy[i] - fx[i] - fy[i]
+		tmp := fxplusy[i] ^ fx[i] ^ fy[i]
 		if gxy[i] != tmp {
 			t.Errorf("%d) %d = %d - %d - %d != %d ", i, tmp, fxplusy[i], fx[i], fy[i], gxy[i])
 			return

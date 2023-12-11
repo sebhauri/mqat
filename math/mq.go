@@ -21,11 +21,11 @@ func G(F []uint8, x []uint8, y []uint8, m int) []uint8 {
 	fy := MQ(F, y, m)
 	xy := make([]uint8, n)
 	for i := 0; i < n; i++ {
-		xy[i] = x[i] + y[i]
+		xy[i] = x[i] ^ y[i]
 	}
 	fxy := MQ(F, xy, m)
 	for i := 0; i < m; i++ {
-		gxi := fxy[i] - fx[i] - fy[i]
+		gxi := fxy[i] ^ fx[i] ^ fy[i]
 		gx[i] = gxi
 	}
 	return gx
@@ -35,7 +35,7 @@ func mqi(Fi, xij []uint8) uint8 {
 	flen := len(Fi)
 	var fi uint8 = 0
 	for i := 0; i < flen; i++ {
-		fi += Mul(Fi[i], xij[i])
+		fi ^= Mul(Fi[i], xij[i])
 	}
 	return fi
 }

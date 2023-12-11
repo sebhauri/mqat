@@ -76,13 +76,13 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	sk_gf31 := math.Nrand(mqdss.N, sk.sk)
 	for i := 0; i < mqdss.R; i++ {
 		for j := 0; j < mqdss.N; j++ {
-			r1ij := sk_gf31[j] - r0[j+i*int(mqdss.N)]
+			r1ij := sk_gf31[j] ^ r0[j+i*int(mqdss.N)]
 			r1[j+i*int(mqdss.N)] = r1ij
 		}
 		G = append(G, math.G(F, t0[i*int(mqdss.N):(i+1)*int(mqdss.N)], r1[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)...)
 	}
 	for i := 0; i < mqdss.R*int(mqdss.M); i++ {
-		gi := G[i] + e0[i]
+		gi := G[i] ^ e0[i]
 		G[i] = gi
 	}
 
@@ -97,12 +97,12 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	alphas := math.Nrand(mqdss.R, h0)
 	for i := 0; i < mqdss.R; i++ {
 		for j := 0; j < int(mqdss.N); j++ {
-			t1ij := math.Mul(alphas[i], r0[i*mqdss.N+j]) - t0[i*mqdss.N+j]
+			t1ij := math.Mul(alphas[i], r0[i*mqdss.N+j]) ^ t0[i*mqdss.N+j]
 			t1[i*mqdss.N+j] = t1ij
 		}
 		Fr0 := math.MQ(F, r0[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)
 		for j := 0; j < mqdss.M; j++ {
-			e1ij := math.Mul(alphas[i], Fr0[j]) - e0[i*mqdss.M+j]
+			e1ij := math.Mul(alphas[i], Fr0[j]) ^ e0[i*mqdss.M+j]
 			e1[i*mqdss.M+j] = e1ij
 		}
 	}
@@ -142,7 +142,7 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 	D := h(tohash)
 
 	sigma0 := bytes.Clone(sig[constants.HASH_BYTES : 2*constants.HASH_BYTES])
-	offset := 2*constants.HASH_BYTES + uint(mqdss.R)*(uint(mqdss.M)+uint(mqdss.N))
+	offset := 2*constants.HASH_BYTES + mqdss.R*(mqdss.M+mqdss.N)
 	sigma1 := bytes.Clone(sig[2*constants.HASH_BYTES : offset])
 	sigma2 := bytes.Clone(sig[offset:])
 
@@ -169,12 +169,12 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 			if b == 0 {
 				x := make([]uint8, mqdss.N)
 				for j := 0; j < mqdss.N; j++ {
-					xj := math.Mul(alphas[i], uint8(r_ch[j])) - uint8(t1[j])
+					xj := math.Mul(alphas[i], uint8(r_ch[j])) ^ uint8(t1[j])
 					x[j] = xj
 				}
 				y := math.MQ(F, r_ch, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := math.Mul(alphas[i], y[j]) - uint8(e1[j])
+					yj := math.Mul(alphas[i], y[j]) ^ uint8(e1[j])
 					y[j] = yj
 				}
 				c0 := com0(r_ch, x, y)
@@ -184,7 +184,7 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 				y := math.MQ(F, r_ch, mqdss.M)
 				z := math.G(F, r_ch, t1, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := math.Mul(alphas[i], math.Mul(pk.v[j], y[j])) - z[j] - uint8(e1[j])
+					yj := math.Mul(alphas[i], pk.v[j]^y[j]) ^ z[j] ^ uint8(e1[j])
 					y[j] = yj
 				}
 				c = append(c, c_ch...)

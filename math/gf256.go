@@ -13,7 +13,6 @@ func IsNonZero(a uint8) bool {
 	return (r & 1) == 1
 }
 
-// gf256 := gf2[X]/ (x^8+x^4+x^3+x+1)   // 0x11b , AES field
 func Mul(a, b uint8) uint8 {
 	r := a * (b & 1)
 
