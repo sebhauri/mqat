@@ -1,7 +1,7 @@
 package math
 
-func MQ(F []Gf31s, x []uint8, m uint8) []uint8 {
-	fx := make([]uint8, m)
+func MQ(F []Gf256, x []Gf256, m int) []Gf256 {
+	fx := make([]Gf256, m)
 	n := len(x)
 	xij := quad(x)
 	xijxi := append(xij, x...)
@@ -11,45 +11,44 @@ func MQ(F []Gf31s, x []uint8, m uint8) []uint8 {
 	return fx
 }
 
-func G(F []Gf31s, x []uint8, y []uint8, m uint8) []uint8 {
+func G(F []Gf256, x []Gf256, y []Gf256, m int) []Gf256 {
 	var n int
 	if n = len(x); n != len(y) {
 		return nil
 	}
-	gx := make([]uint8, m)
+	gx := make([]Gf256, m)
 	fx := MQ(F, x, m)
 	fy := MQ(F, y, m)
-	xy := make([]uint8, n)
+	xy := make([]Gf256, n)
 	for i := 0; i < n; i++ {
-		xy[i] = Mod31(uint16(x[i] + y[i]))
+		xy[i] = x[i] + y[i]
 	}
 	fxy := MQ(F, xy, m)
-	var i uint8
-	for i = 0; i < m; i++ {
-		gxi := int(fxy[i]) - int(fx[i]) - int(fy[i])
-		gx[i] = Mod31(uint16((gxi >> 15) + (gxi & 0x7FFF)))
+	for i := 0; i < m; i++ {
+		gxi := fxy[i] - fx[i] - fy[i]
+		gx[i] = gxi
 	}
 	return gx
 }
 
-func mqi(Fi []Gf31s, xij []uint8) uint8 {
+func mqi(Fi, xij []Gf256) Gf256 {
 	flen := len(Fi)
-	var fi int = 0
+	var fi Gf256 = 0
 	for i := 0; i < flen; i++ {
-		fi += (int(xij[i]) * int(Fi[i]))
+		fi += Mul(Fi[i], xij[i])
 	}
-	return Mod31(uint16((fi >> 15) + (fi & 0x7FFF)))
+	return fi
 }
 
-func quad(x []uint8) []uint8 {
+func quad(x []Gf256) []Gf256 {
 	n := len(x)
 	filen := n * (n + 1) / 2
-	xij := make([]uint8, filen)
+	xij := make([]Gf256, filen)
 	k := 0
 	for i := 0; i < n && k < filen; i++ {
 		for j := i; j < n && k < filen; j++ {
-			ri := int(x[i]) * int(x[j])
-			xij[k] = Mod31(uint16((ri >> 15) + (ri & 0x7FFF)))
+			xijk := Mul(x[i], x[j])
+			xij[k] = xijk
 			k++
 		}
 	}

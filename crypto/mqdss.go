@@ -10,20 +10,20 @@ import (
 )
 
 type MQDSS struct {
-	N, M uint8
-	R    uint16
-	flen uint
+	N, M int
+	R    int
+	flen int
 }
 
-func NewMQDSS(m, n uint8, r uint16) *MQDSS {
-	if m > n {
+func NewMQDSS(m, n, r int) *MQDSS {
+	if m <= 0 || n <= 0 || r <= 0 || m > n {
 		return nil
 	}
 	mqdss := new(MQDSS)
 	mqdss.M = m
 	mqdss.N = n
-	mqdss.R = r //TODO: See what we can do better with this.
-	mqdss.flen = (uint(n)*uint((n+1))/2 + uint(n)) * uint(m)
+	mqdss.R = r
+	mqdss.flen = n*(n+1)/2 + n*m
 	return mqdss
 }
 
@@ -38,11 +38,11 @@ func (mqdss *MQDSS) KeyPair() *KeyPair {
 	kp.S.sk = sk_sf[len(sk_sf)/2:]
 	kp.S.seed = sk_sf[:len(sk_sf)/2]
 	kp.P.seed = sk_sf[:len(sk_sf)/2]
-	F := math.Gf31_nrand_signed(mqdss.flen, kp.P.seed)
+	F := math.Nrand(mqdss.flen, kp.P.seed)
 	if F == nil {
 		return nil
 	}
-	sk_gf31 := math.Gf31_nrand(uint(mqdss.N), kp.S.sk)
+	sk_gf31 := math.Nrand(mqdss.N, kp.S.sk)
 	if sk_gf31 == nil {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (mqdss *MQDSS) KeyPair() *KeyPair {
 }
 
 func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
-	F := math.Gf31_nrand_signed(mqdss.flen, sk.seed)
+	F := math.Nrand(mqdss.flen, sk.seed)
 	if F == nil {
 		return nil
 	}
@@ -64,46 +64,46 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	tohash = append(C[:], message...)
 	D := h(tohash)
 	seed := append(sk.sk, D[:]...)
-	r0t0e0 := math.Gf31_nrand((2*uint(mqdss.N)+uint(mqdss.M))*uint(mqdss.R), seed)
-	r0 := r0t0e0[:uint(mqdss.R)*uint(mqdss.N)]
-	r1 := make([]uint8, len(r0))
+	r0t0e0 := math.Nrand((2*mqdss.N+mqdss.M)*mqdss.R, seed)
+	r0 := r0t0e0[:mqdss.R*mqdss.N]
+	r1 := make([]math.Gf256, len(r0))
 	t0 := r0t0e0[uint(mqdss.R)*uint(mqdss.N) : 2*uint(mqdss.R)*uint(mqdss.N)]
-	t1 := make([]uint8, len(t0))
+	t1 := make([]math.Gf256, len(t0))
 	e0 := r0t0e0[2*uint(mqdss.R)*uint(mqdss.N):]
-	e1 := make([]uint8, len(e0))
-	G := make([]uint8, 0)
+	e1 := make([]math.Gf256, len(e0))
+	G := make([]math.Gf256, 0)
 
-	sk_gf31 := math.Gf31_nrand(uint(mqdss.N), sk.sk)
-	for i := 0; i < int(mqdss.R); i++ {
-		for j := 0; j < int(mqdss.N); j++ {
-			r1ij := int(sk_gf31[j]) - int(r0[j+i*int(mqdss.N)])
-			r1[j+i*int(mqdss.N)] = math.Mod31(uint16((r1ij >> 15) + (r1ij & 0x7FFF)))
+	sk_gf31 := math.Nrand(mqdss.N, sk.sk)
+	for i := 0; i < mqdss.R; i++ {
+		for j := 0; j < mqdss.N; j++ {
+			r1ij := sk_gf31[j] - r0[j+i*int(mqdss.N)]
+			r1[j+i*int(mqdss.N)] = r1ij
 		}
 		G = append(G, math.G(F, t0[i*int(mqdss.N):(i+1)*int(mqdss.N)], r1[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)...)
 	}
-	for i := 0; i < int(mqdss.R)*int(mqdss.M); i++ {
-		gi := int(G[i]) + int(e0[i])
-		G[i] = math.Mod31(uint16((gi >> 15) + (gi & 0x7FFF)))
+	for i := 0; i < mqdss.R*int(mqdss.M); i++ {
+		gi := G[i] + e0[i]
+		G[i] = gi
 	}
 
 	c := make([]byte, 0)
-	for i := 0; i < int(mqdss.R); i++ {
-		c = append(c, com0(r0[i*int(mqdss.N):(i+1)*int(mqdss.N)], t0[i*int(mqdss.N):(i+1)*int(mqdss.N)], e0[i*int(mqdss.M):(i+1)*int(mqdss.M)])...)
-		c = append(c, com1(r1[i*int(mqdss.N):(i+1)*int(mqdss.N)], G[i*int(mqdss.M):(i+1)*int(mqdss.M)])...)
+	for i := 0; i < mqdss.R; i++ {
+		c = append(c, com0(r0[i*mqdss.N:(i+1)*mqdss.N], t0[i*mqdss.N:(i+1)*mqdss.N], e0[i*mqdss.M:(i+1)*mqdss.M])...)
+		c = append(c, com1(r1[i*mqdss.N:(i+1)*mqdss.N], G[i*mqdss.M:(i+1)*mqdss.M])...)
 	}
 	sigma0 := h(c)
 	h0 := append(D[:], sigma0[:]...)
 
-	alphas := math.Gf31_nrand(uint(mqdss.R), h0)
-	for i := 0; i < int(mqdss.R); i++ {
+	alphas := math.Nrand(mqdss.R, h0)
+	for i := 0; i < mqdss.R; i++ {
 		for j := 0; j < int(mqdss.N); j++ {
-			t1ij := int(alphas[i])*int(r0[i*int(mqdss.N)+j]) - int(t0[i*int(mqdss.N)+j])
-			t1[i*int(mqdss.N)+j] = math.Mod31(uint16((t1ij >> 15) + (t1ij & 0x7FFF)))
+			t1ij := math.Mul(alphas[i], r0[i*mqdss.N+j]) - t0[i*mqdss.N+j]
+			t1[i*mqdss.N+j] = t1ij
 		}
 		Fr0 := math.MQ(F, r0[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)
-		for j := 0; j < int(mqdss.M); j++ {
-			e1ij := int(alphas[i])*int(Fr0[j]) - int(e0[i*int(mqdss.M)+j])
-			e1[i*int(mqdss.M)+j] = math.Mod31(uint16((e1ij >> 15) + (e1ij & 0x7FFF)))
+		for j := 0; j < mqdss.M; j++ {
+			e1ij := math.Mul(alphas[i], Fr0[j]) - e0[i*mqdss.M+j]
+			e1[i*mqdss.M+j] = e1ij
 		}
 	}
 	sigma1 := append(t1, e1...)
@@ -112,7 +112,7 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
 	sigma2 := make([]byte, 0)
-	for i := 0; i < int(mqdss.R); {
+	for i := 0; i < mqdss.R; {
 		h1.Read(shakeBlock)
 		for _, v := range shakeBlock {
 			b := v & 1
@@ -136,7 +136,7 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 }
 
 func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
-	F := math.Gf31_nrand_signed(mqdss.flen, pk.seed)
+	F := math.Nrand(mqdss.flen, pk.seed)
 	C := bytes.Clone(sig[:constants.HASH_BYTES])
 	tohash := append(C, message...)
 	D := h(tohash)
@@ -147,35 +147,35 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 	sigma2 := bytes.Clone(sig[offset:])
 
 	h0 := append(D[:], sigma0...)
-	alphas := math.Gf31_nrand(uint(mqdss.R), h0)
+	alphas := math.Nrand(mqdss.R, h0)
 	h1 := sha3.NewShake128()
 	tohash = append(h0, sigma1...)
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
 	c := make([]byte, 0)
-	for i := 0; i < int(mqdss.R); {
+	for i := 0; i < mqdss.R; {
 		h1.Read(shakeBlock)
 		for _, v := range shakeBlock {
-			r_offset := i * (int(mqdss.N) + constants.HASH_BYTES)
-			c_offset := r_offset + int(mqdss.N)
+			r_offset := i * (mqdss.N + constants.HASH_BYTES)
+			c_offset := r_offset + mqdss.N
 			r_ch := bytes.Clone(sigma2[r_offset:c_offset])
 			c_ch := bytes.Clone(sigma2[c_offset : c_offset+constants.HASH_BYTES])
-			t_offset := i * int(mqdss.N)
-			t1 := sigma1[t_offset : t_offset+int(mqdss.N)]
-			e_offset := int(mqdss.R)*int(mqdss.N) + i*int(mqdss.M)
-			e1 := sigma1[e_offset : e_offset+int(mqdss.M)]
+			t_offset := i * mqdss.N
+			t1 := sigma1[t_offset : t_offset+mqdss.N]
+			e_offset := mqdss.R*mqdss.N + i*mqdss.M
+			e1 := sigma1[e_offset : e_offset+mqdss.M]
 
 			b := v & 1
 			if b == 0 {
-				x := make([]uint8, mqdss.N)
-				for j := 0; j < int(mqdss.N); j++ {
-					xj := int(alphas[i])*int(r_ch[j]) - int(t1[j])
-					x[j] = math.Mod31(uint16((xj >> 15) + (xj & 0x7FFF)))
+				x := make([]math.Gf256, mqdss.N)
+				for j := 0; j < mqdss.N; j++ {
+					xj := math.Mul(alphas[i], math.Gf256(r_ch[j])) - math.Gf256(t1[j])
+					x[j] = xj
 				}
 				y := math.MQ(F, r_ch, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := int(alphas[i])*int(y[j]) - int(e1[j])
-					y[j] = math.Mod31(uint16((yj >> 15) + (yj & 0x7FFF)))
+					yj := math.Mul(alphas[i], y[j]) - math.Gf256(e1[j])
+					y[j] = yj
 				}
 				c0 := com0(r_ch, x, y)
 				c = append(c, c0...)
@@ -184,8 +184,8 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 				y := math.MQ(F, r_ch, mqdss.M)
 				z := math.G(F, r_ch, t1, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := int(alphas[i])*(int(pk.v[j])-int(y[j])) - int(z[j]) - int(e1[j])
-					y[j] = math.Mod31(uint16((yj >> 15) + (yj & 0x7FFF)))
+					yj := math.Mul(alphas[i], math.Mul(pk.v[j], y[j])) - z[j] - math.Gf256(e1[j])
+					y[j] = yj
 				}
 				c = append(c, c_ch...)
 				c1 := com1(r_ch, y)
@@ -205,14 +205,14 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-func com0(r0, t0, e0 []uint8) []byte {
+func com0(r0, t0, e0 []math.Gf256) []byte {
 	tmp := append(bytes.Clone(t0), bytes.Clone(e0)...)
 	m := append(bytes.Clone(r0), tmp...)
 	digest := sha3.Sum256(bytes.Clone(m))
 	return digest[:]
 }
 
-func com1(r1, gx []uint8) []byte {
+func com1(r1, gx []math.Gf256) []byte {
 	m := append(bytes.Clone(r1), bytes.Clone(gx)...)
 	digest := sha3.Sum256(bytes.Clone(m))
 	return digest[:]
