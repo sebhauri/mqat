@@ -9,12 +9,6 @@ import (
 	"sebastienhauri.ch/mqt/math"
 )
 
-type MQDSS struct {
-	N, M int
-	R    int
-	flen int
-}
-
 func NewMQDSS(m, n, r int) *MQDSS {
 	if m <= 0 || n <= 0 || r <= 0 || m > n {
 		return nil
@@ -28,33 +22,34 @@ func NewMQDSS(m, n, r int) *MQDSS {
 }
 
 // TODO: handling errors better
-func (mqdss *MQDSS) KeyPair() *KeyPair {
-	kp := new(KeyPair)
+func (mqdss *MQDSS) KeyPair() (*MQDSSSecretKey, *MQDSSPublicKey) {
+	sk := new(MQDSSSecretKey)
+	pk := new(MQDSSPublicKey)
 	sk_sf := make([]byte, 2*constants.SEED_BYTES)
 	_, err := rand.Read(sk_sf)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-	kp.S.sk = sk_sf[len(sk_sf)/2:]
-	kp.S.seed = sk_sf[:len(sk_sf)/2]
-	kp.P.seed = sk_sf[:len(sk_sf)/2]
-	F := math.Nrand(mqdss.flen, kp.P.seed)
+	sk.sk = sk_sf[len(sk_sf)/2:]
+	sk.seed = sk_sf[:len(sk_sf)/2]
+	pk.seed = sk_sf[:len(sk_sf)/2]
+	F := math.Nrand(mqdss.flen, pk.seed)
 	if F == nil {
-		return nil
+		return nil, nil
 	}
-	sk_gf31 := math.Nrand(mqdss.N, kp.S.sk)
-	if sk_gf31 == nil {
-		return nil
+	sk_gf256 := math.Nrand(mqdss.N, sk.sk)
+	if sk_gf256 == nil {
+		return nil, nil
 	}
-	pk_gf31 := math.MQ(F, sk_gf31, mqdss.M)
-	if pk_gf31 == nil {
-		return nil
+	pk_gf256 := math.MQ(F, sk_gf256, mqdss.M)
+	if pk_gf256 == nil {
+		return nil, nil
 	}
-	kp.P.v = pk_gf31
-	return kp
+	pk.v = pk_gf256
+	return sk, pk
 }
 
-func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
+func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
 	F := math.Nrand(mqdss.flen, sk.seed)
 	if F == nil {
 		return nil
@@ -73,10 +68,10 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	e1 := make([]uint8, len(e0))
 	G := make([]uint8, 0)
 
-	sk_gf31 := math.Nrand(mqdss.N, sk.sk)
+	sk_gf256 := math.Nrand(mqdss.N, sk.sk)
 	for i := 0; i < mqdss.R; i++ {
 		for j := 0; j < mqdss.N; j++ {
-			r1ij := sk_gf31[j] ^ r0[j+i*int(mqdss.N)]
+			r1ij := sk_gf256[j] ^ r0[j+i*int(mqdss.N)]
 			r1[j+i*int(mqdss.N)] = r1ij
 		}
 		G = append(G, math.G(F, t0[i*int(mqdss.N):(i+1)*int(mqdss.N)], r1[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)...)
@@ -135,7 +130,7 @@ func (mqdss *MQDSS) Sign(message Message, sk SecretKey) Signature {
 	return sig
 }
 
-func (mqdss *MQDSS) Verify(message Message, sig Signature, pk PublicKey) bool {
+func (mqdss *MQDSS) Verify(message Message, sig Signature, pk *MQDSSPublicKey) bool {
 	F := math.Nrand(mqdss.flen, pk.seed)
 	C := bytes.Clone(sig[:constants.HASH_BYTES])
 	tohash := append(C, message...)
