@@ -8,11 +8,10 @@ import (
 	constants "sebastienhauri.ch/mqt/const"
 )
 
-func NewUOV(m, n, salt_len, pk_seed_len, sk_seed_len int) *UOV {
+func NewUOV(m, n, pk_seed_len, sk_seed_len int) *UOV {
 	uov := new(UOV)
 	uov.M = m
 	uov.N = n
-	uov.SaltLen = salt_len
 	uov.PkSeedLen = pk_seed_len
 	uov.SkSeedLen = sk_seed_len
 	return uov
