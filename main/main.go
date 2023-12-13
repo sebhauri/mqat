@@ -25,7 +25,7 @@ func main() {
 	}
 	end := time.Since(start)
 	fmt.Printf("\t Time elapsed: %d milliseconds.\n", end.Milliseconds())
-	fmt.Printf("\t Mean time per key generation: %.3f milliseconds.\n\n", float64(end.Milliseconds())/200)
+	fmt.Printf("\t Mean time per key generation: %.3f milliseconds.\n\n", float64(end.Milliseconds())/constants.MEASURE_ROUNDS)
 
 	println("Benchmarking signature..")
 	sig := make([]byte, 2*constants.HASH_BYTES+int(mqdss.R)*(constants.M+2*constants.N*constants.HASH_BYTES))

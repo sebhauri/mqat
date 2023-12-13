@@ -4,9 +4,8 @@ func MQ(F []uint8, x []uint8, m int) []uint8 {
 	fx := make([]uint8, m)
 	n := len(x)
 	xij := quad(x)
-	xijxi := append(xij, x...)
 	for i := 0; i < m; i++ {
-		fx[i] = mqi(F[i*(n*(n+1)/2+n):(i+1)*(n*(n+1)/2+n)], xijxi)
+		fx[i] = mqi(F[i*(n*(n+1)/2):(i+1)*(n*(n+1)/2)], xij)
 	}
 	return fx
 }

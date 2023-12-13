@@ -17,7 +17,7 @@ func NewMQDSS(m, n, r int) *MQDSS {
 	mqdss.M = m
 	mqdss.N = n
 	mqdss.R = r
-	mqdss.flen = (n*(n+1)/2 + n) * m
+	mqdss.flen = (n * (n + 1) / 2) * m
 	return mqdss
 }
 
