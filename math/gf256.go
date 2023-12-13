@@ -1,9 +1,5 @@
 package math
 
-import (
-	"golang.org/x/crypto/sha3"
-)
-
 func IsNonZero(a uint8) bool {
 	a8 := a
 	r := 0 - a8
@@ -57,22 +53,4 @@ func Inv(a uint8) uint8 {
 	a64_2 := Mul(a64_, a8_4_2)
 	a128_ := Square(a64_2)
 	return Mul(a2, a128_)
-}
-
-func Nrand256(n int, seed []byte) []uint8 {
-	if n <= 0 {
-		return nil
-	}
-	out := make([]uint8, n)
-	sha3.ShakeSum256(out, seed)
-	return out
-}
-
-func Nrand128(n int, seed []byte) []uint8 {
-	if n <= 0 {
-		return nil
-	}
-	out := make([]uint8, n)
-	sha3.ShakeSum128(out, seed)
-	return out
 }

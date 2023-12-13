@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	constants "sebastienhauri.ch/mqt/const"
+	"sebastienhauri.ch/mqt/crypto"
 	"sebastienhauri.ch/mqt/math"
 )
 
@@ -12,10 +13,10 @@ func TestCorrectness(t *testing.T) {
 	F_seed := []byte{1}
 	seed := []byte{2}
 	alpha_seed := []byte{3}
-	F := math.Nrand128(constants.FLEN, F_seed)
-	x := math.Nrand256(constants.N, x_seed)
+	F := crypto.Nrand128(constants.FLEN, F_seed)
+	x := crypto.Nrand256(constants.N, x_seed)
 	v := math.MQ(F, x, constants.M)
-	r0t0e0 := math.Nrand256(2*constants.N+constants.M, seed)
+	r0t0e0 := crypto.Nrand256(2*constants.N+constants.M, seed)
 	r0 := r0t0e0[:constants.N]
 	r1 := make([]uint8, len(r0))
 	t0 := r0t0e0[constants.N : 2*constants.N]
@@ -38,7 +39,7 @@ func TestCorrectness(t *testing.T) {
 	}
 
 	// generate aplpha
-	alpha := math.Nrand256(1, alpha_seed)
+	alpha := crypto.Nrand256(1, alpha_seed)
 
 	// compute t1
 	for i := 0; i < constants.N; i++ {

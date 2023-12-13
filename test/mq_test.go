@@ -4,14 +4,15 @@ import (
 	"testing"
 
 	constants "sebastienhauri.ch/mqt/const"
+	"sebastienhauri.ch/mqt/crypto"
 	"sebastienhauri.ch/mqt/math"
 )
 
 func TestMQ(t *testing.T) {
 	x_seed := []byte{0}
 	F_seed := []byte{1}
-	x := math.Nrand256(constants.N, x_seed)
-	F := math.Nrand128(constants.FLEN, F_seed)
+	x := crypto.Nrand256(constants.N, x_seed)
+	F := crypto.Nrand128(constants.FLEN, F_seed)
 	fx := math.MQ(F, x, constants.M)
 	t.Logf("fx=%v", fx)
 
@@ -58,9 +59,9 @@ func TestG(t *testing.T) {
 	x_seed := []byte{0}
 	y_seed := []byte{2}
 	F_seed := []byte{1}
-	x := math.Nrand256(constants.N, x_seed)
-	y := math.Nrand256(constants.N, y_seed)
-	F := math.Nrand128(constants.FLEN, F_seed)
+	x := crypto.Nrand256(constants.N, x_seed)
+	y := crypto.Nrand256(constants.N, y_seed)
+	F := crypto.Nrand128(constants.FLEN, F_seed)
 	fx := math.MQ(F, x, constants.M)
 	fy := math.MQ(F, y, constants.M)
 	xplusy := make([]uint8, constants.N)

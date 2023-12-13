@@ -1,13 +1,10 @@
 package crypto
 
 import (
-	"bytes"
 	"crypto/rand"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 	constants "sebastienhauri.ch/mqt/const"
-	"sebastienhauri.ch/mqt/math"
 )
 
 func NewMQAT(
@@ -41,7 +38,7 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 		return nil, nil
 	}
 
-	random_sys_seed := make([]byte, constants.RANDOM_SYS_LEN)
+	random_sys_seed := make([]byte, constants.RANDOM_SYS_SEED_LEN/8)
 	_, err := rand.Read(random_sys_seed)
 	if err != nil {
 		logrus.Error("Could not sample random system seed")
@@ -63,15 +60,16 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) []uint8 {
 		logrus.Error("Could not sample salt")
 		return nil
 	}
-	t := make([]byte, constants.LAMBDA)
-	w := hash(mqat.m, t, salt)
+	t := make([]byte, constants.LAMBDA/8)
+	seed := append(t, salt...)
+	w := Nrand256(mqat.m, seed)
 
 	_, err = rand.Read(salt)
 	if err != nil {
 		logrus.Error("Could not sample salt")
 		return nil
 	}
-	z_star := math.Nrand(mqat.m, salt)
+	z_star := Nrand256(mqat.m, salt)
 	if z_star == nil {
 		logrus.Error("Could not sample z*")
 	}
@@ -90,10 +88,3 @@ func (mqat *MQAT) User1(resp []uint8) *MQATToken {
 ////////////////////////////////////////////////////////////////////////////////
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////
-
-func hash(m int, t, salt []byte) []uint8 {
-	to_hash := append(bytes.Clone(t), bytes.Clone(salt)...)
-	out := make([]uint8, m)
-	sha3.ShakeSum256(out, to_hash)
-	return out
-}
