@@ -12,13 +12,13 @@ type MQAT struct {
 }
 
 type MQATSecretKey struct {
-	uov_csk *UOVSecretKey
-	seedR   []byte
+	uov_sk          *UOVSecretKey
+	seed_random_sys []byte
 }
 
 type MQATPublicKey struct {
-	uov_cpk *UOVPublicKey
-	seedR   []byte
+	uov_pk          *UOVPublicKey
+	seed_random_sys []byte
 }
 
 type MQATToken struct {
@@ -31,19 +31,21 @@ type MQATToken struct {
 // UOV
 // //////////////////////////////////////
 type UOV struct {
-	M, N      int
-	PkSeedLen int
-	SkSeedLen int
+	m, n        int
+	pk_seed_len int
+	sk_seed_len int
 }
 
 type UOVSecretKey struct {
-	seed_sk []byte
-	seed_pk []byte
+	seed_sk      []byte
+	trapdoor_o   []uint8
+	matrices_p1i []uint8
+	matrices_si  []uint8
 }
 
 type UOVPublicKey struct {
-	seed_pk []byte
-	Pi3     []uint8
+	seed_pk         []byte
+	quadratic_map_p []uint8
 }
 
 // //////////////////////////////////////

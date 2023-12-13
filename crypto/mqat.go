@@ -35,8 +35,8 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 	sk := new(MQATSecretKey)
 	pk := new(MQATPublicKey)
 
-	uov_csk, uov_cpk := mqat.uov.KeyGen(mqat.m, mqat.n)
-	if uov_csk == nil || uov_cpk == nil {
+	uov_sk, uov_pk := mqat.uov.KeyGen(mqat.m, mqat.n)
+	if uov_sk == nil || uov_pk == nil {
 		logrus.Error("Could not generate UOV public key")
 		return nil, nil
 	}
@@ -48,10 +48,10 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 		return nil, nil
 	}
 
-	sk.uov_csk = uov_csk
-	sk.seedR = random_sys_seed
-	pk.seedR = random_sys_seed
-	pk.uov_cpk = uov_cpk
+	sk.uov_sk = uov_sk
+	sk.seed_random_sys = random_sys_seed
+	pk.seed_random_sys = random_sys_seed
+	pk.uov_pk = uov_pk
 
 	return sk, pk
 }
@@ -77,7 +77,7 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) ([]byte, []byte, []uint8, []uint8) {
 	if z_star == nil {
 		logrus.Error("Could not sample z*")
 	}
-	R := Nrand128(math.Flen(mqat.m, mqat.m), pk.seedR)
+	R := Nrand128(math.Flen(mqat.m, mqat.m), pk.seed_random_sys)
 	w_star := math.MQ(R, z_star, mqat.m)
 
 	w_tilde := make([]uint8, mqat.m)
@@ -89,10 +89,15 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) ([]byte, []byte, []uint8, []uint8) {
 }
 
 func (mqat *MQAT) Sign0(sk *MQATSecretKey, query []byte) []uint8 {
-	return nil
+	return mqat.uov.Sign(query, sk.uov_sk)
 }
 
-func (mqat *MQAT) User1(resp []uint8) *MQATToken {
+func (mqat *MQAT) User1(
+	t []byte,
+	salt []byte,
+	z_star []uint8,
+	resp []uint8,
+) *MQATToken {
 	return nil
 }
 
