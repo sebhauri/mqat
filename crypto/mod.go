@@ -4,10 +4,11 @@ package crypto
 // MQAT
 // //////////////////////////////////////
 type MQAT struct {
-	n, m     int
-	salt_len int
-	uov      *UOV
-	mqdss    *MQDSS
+	n, m                int
+	salt_len            int
+	random_sys_seed_len int
+	uov                 *UOV
+	mqdss               *MQDSS
 }
 
 type MQATSecretKey struct {
@@ -22,6 +23,7 @@ type MQATPublicKey struct {
 
 type MQATToken struct {
 	token           []byte
+	salt            []byte
 	mqdss_signature []byte
 }
 

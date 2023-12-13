@@ -17,7 +17,7 @@ func NewMQDSS(m, n, r int) *MQDSS {
 	mqdss.M = m
 	mqdss.N = n
 	mqdss.R = r
-	mqdss.flen = (n * (n + 1) / 2) * m
+	mqdss.flen = math.Flen(m, n)
 	return mqdss
 }
 
@@ -25,7 +25,7 @@ func NewMQDSS(m, n, r int) *MQDSS {
 func (mqdss *MQDSS) KeyPair() (*MQDSSSecretKey, *MQDSSPublicKey) {
 	sk := new(MQDSSSecretKey)
 	pk := new(MQDSSPublicKey)
-	sk_sf := make([]byte, 2*constants.SEED_BYTES)
+	sk_sf := make([]byte, 2*constants.MQDSS_SEED_BYTES)
 	_, err := rand.Read(sk_sf)
 	if err != nil {
 		return nil, nil

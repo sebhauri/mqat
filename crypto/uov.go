@@ -3,8 +3,6 @@ package crypto
 import (
 	"bytes"
 	"crypto/rand"
-
-	constants "sebastienhauri.ch/mqt/const"
 )
 
 func NewUOV(m, n, pk_seed_len, sk_seed_len int) *UOV {
@@ -20,12 +18,12 @@ func (uov *UOV) KeyGen(m, n int) (*UOVSecretKey, *UOVPublicKey) {
 	uov_csk := new(UOVSecretKey)
 	uov_cpk := new(UOVPublicKey)
 
-	uov_seed_sk := make([]byte, constants.UOV_SK_SEED_LEN/8)
+	uov_seed_sk := make([]byte, uov.SkSeedLen/8)
 	_, err := rand.Read(uov_seed_sk)
 	if err != nil {
 		return nil, nil
 	}
-	uov_seed_pk := make([]byte, constants.UOV_PK_SEED_LEN/8)
+	uov_seed_pk := make([]byte, uov.PkSeedLen/8)
 	_, err = rand.Read(uov_seed_pk)
 	if err != nil {
 		return nil, nil

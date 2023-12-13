@@ -5,6 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	constants "sebastienhauri.ch/mqt/const"
+	"sebastienhauri.ch/mqt/math"
 )
 
 func NewMQAT(
@@ -12,6 +13,7 @@ func NewMQAT(
 	salt_len int,
 	uov_pk_seed_len int,
 	uov_sk_seed_len int,
+	random_sys_seed_len int,
 	mqdss_rounds int,
 ) *MQAT {
 	if m <= 0 || n <= 0 || m > n || salt_len <= 0 ||
@@ -23,6 +25,7 @@ func NewMQAT(
 	mqat.m = m
 	mqat.n = n
 	mqat.salt_len = salt_len
+	mqat.random_sys_seed_len = random_sys_seed_len
 	mqat.uov = NewUOV(m, n, uov_pk_seed_len, uov_sk_seed_len)
 	mqat.mqdss = NewMQDSS(m, m+n, mqdss_rounds)
 	return mqat
@@ -38,7 +41,7 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 		return nil, nil
 	}
 
-	random_sys_seed := make([]byte, constants.RANDOM_SYS_SEED_LEN/8)
+	random_sys_seed := make([]byte, mqat.random_sys_seed_len/8)
 	_, err := rand.Read(random_sys_seed)
 	if err != nil {
 		logrus.Error("Could not sample random system seed")
@@ -53,28 +56,36 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 	return sk, pk
 }
 
-func (mqat *MQAT) User0(pk *MQATPublicKey) []uint8 {
-	salt := make([]byte, mqat.salt_len)
+func (mqat *MQAT) User0(pk *MQATPublicKey) ([]byte, []byte, []uint8, []uint8) {
+	salt := make([]byte, mqat.salt_len/8)
 	_, err := rand.Read(salt)
 	if err != nil {
 		logrus.Error("Could not sample salt")
-		return nil
+		return nil, nil, nil, nil
 	}
 	t := make([]byte, constants.LAMBDA/8)
-	seed := append(t, salt...)
-	w := Nrand256(mqat.m, seed)
+	w_seed := append(t, salt...)
+	w := Nrand256(mqat.m, w_seed)
 
+	z_star_seed := make([]byte, 2*constants.LAMBDA)
 	_, err = rand.Read(salt)
 	if err != nil {
-		logrus.Error("Could not sample salt")
-		return nil
+		logrus.Error("Could not sample z* randomness")
+		return nil, nil, nil, nil
 	}
-	z_star := Nrand256(mqat.m, salt)
+	z_star := Nrand256(mqat.m, z_star_seed)
 	if z_star == nil {
 		logrus.Error("Could not sample z*")
 	}
+	R := Nrand128(math.Flen(mqat.m, mqat.m), pk.seedR)
+	w_star := math.MQ(R, z_star, mqat.m)
 
-	return w
+	w_tilde := make([]uint8, mqat.m)
+	for i := 0; i < len(w_tilde); i++ {
+		w_tilde[i] = w[i] ^ w_star[i]
+	}
+
+	return t, salt, z_star, w_tilde
 }
 
 func (mqat *MQAT) Sign0(sk *MQATSecretKey, query []byte) []uint8 {

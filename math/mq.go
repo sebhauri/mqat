@@ -5,7 +5,7 @@ func MQ(F []uint8, x []uint8, m int) []uint8 {
 	n := len(x)
 	xij := quad(x)
 	for i := 0; i < m; i++ {
-		fx[i] = mqi(F[i*(n*(n+1)/2):(i+1)*(n*(n+1)/2)], xij)
+		fx[i] = mqi(F[Flen(i, n):Flen(i+1, n)], xij)
 	}
 	return fx
 }
@@ -29,6 +29,14 @@ func G(F []uint8, x []uint8, y []uint8, m int) []uint8 {
 	}
 	return gx
 }
+
+func Flen(m, n int) int {
+	return m * n * (n + 1) / 2
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helpers
+////////////////////////////////////////////////////////////////////////////////
 
 func mqi(Fi, xij []uint8) uint8 {
 	flen := len(Fi)
