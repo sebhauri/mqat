@@ -10,8 +10,8 @@ import (
 func TestMQ(t *testing.T) {
 	x_seed := []byte{0}
 	F_seed := []byte{1}
-	x := math.Nrand(constants.N, x_seed)
-	F := math.Nrand(constants.FLEN, F_seed)
+	x := math.Nrand256(constants.N, x_seed)
+	F := math.Nrand128(constants.FLEN, F_seed)
 	fx := math.MQ(F, x, constants.M)
 	t.Logf("fx=%v", fx)
 
@@ -33,15 +33,14 @@ func TestMQ(t *testing.T) {
 			k++
 		}
 	}
-	xijxi := append(xij, x2[:]...)
-	if len(xijxi) != filen+constants.N {
+	if len(xij) != filen {
 		t.Errorf("xijxi does not have good length.")
 		return
 	}
 	for i := 0; i < constants.M; i++ {
 		var fxi uint8 = 0
-		for j := 0; j < filen+constants.N; j++ {
-			fxi ^= math.Mul(xijxi[j], F2[i*(filen+constants.N)+j])
+		for j := 0; j < filen; j++ {
+			fxi ^= math.Mul(xij[j], F2[i*(filen)+j])
 		}
 		fx2[i] = fxi
 	}
@@ -59,9 +58,9 @@ func TestG(t *testing.T) {
 	x_seed := []byte{0}
 	y_seed := []byte{2}
 	F_seed := []byte{1}
-	x := math.Nrand(constants.N, x_seed)
-	y := math.Nrand(constants.N, y_seed)
-	F := math.Nrand(constants.FLEN, F_seed)
+	x := math.Nrand256(constants.N, x_seed)
+	y := math.Nrand256(constants.N, y_seed)
+	F := math.Nrand128(constants.FLEN, F_seed)
 	fx := math.MQ(F, x, constants.M)
 	fy := math.MQ(F, y, constants.M)
 	xplusy := make([]uint8, constants.N)

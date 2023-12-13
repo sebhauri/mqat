@@ -76,7 +76,7 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) []uint8 {
 		logrus.Error("Could not sample z*")
 	}
 
-	return nil
+	return w
 }
 
 func (mqat *MQAT) Sign0(sk *MQATSecretKey, query []byte) []uint8 {

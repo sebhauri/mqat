@@ -1,8 +1,6 @@
 package math
 
 import (
-	"bytes"
-
 	"golang.org/x/crypto/sha3"
 )
 
@@ -61,51 +59,20 @@ func Inv(a uint8) uint8 {
 	return Mul(a2, a128_)
 }
 
-func Nrand(n int, seed []byte) []uint8 {
+func Nrand256(n int, seed []byte) []uint8 {
 	if n <= 0 {
 		return nil
 	}
 	out := make([]uint8, n)
-	shake128 := sha3.NewShake128()
-	shakeBlock := make([]uint8, shake128.BlockSize())
-	shake128.Write(bytes.Clone(seed))
-	for i := 0; i < n; {
-		_, err := shake128.Read(shakeBlock)
-		if err != nil {
-			return nil
-		}
-		for _, v := range shakeBlock {
-			out[i] = uint8(v)
-			i++
-			if i >= n {
-				break
-			}
-
-		}
-	}
+	sha3.ShakeSum256(out, seed)
 	return out
 }
 
-// func NrandSigned(n int, seed []byte) []uint8$s {
-// 	if n <= 0 {
-// 		return nil
-// 	}
-// 	out := make([]uint8$s, n)
-// 	shake128 := sha3.NewShake128()
-// 	shakeBlock := make([]uint8, shake128.BlockSize()/8)
-// 	shake128.Write(bytes.Clone(seed))
-// 	for i := 0; i < n; {
-// 		_, err := shake128.Read(shakeBlock)
-// 		if err != nil {
-// 			return nil
-// 		}
-// 		for _, v := range shakeBlock {
-// 			out[i] = uint8$s(v)
-// 			i++
-// 			if i >= n {
-// 				break
-// 			}
-// 		}
-// 	}
-// 	return out
-// }
+func Nrand128(n int, seed []byte) []uint8 {
+	if n <= 0 {
+		return nil
+	}
+	out := make([]uint8, n)
+	sha3.ShakeSum128(out, seed)
+	return out
+}
