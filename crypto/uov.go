@@ -87,7 +87,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 					}
 				}
 			}
-			x := solve(L, y)
+			x := solve(L, y, uov.m)
 			for i := 0; i < uov.n-uov.m; i++ {
 				var acc uint8 = 0
 				for j := 0; j < uov.m; j++ {
@@ -112,4 +112,29 @@ func derivePi3(O, Pi1, Pi2 []uint8, m, n int) []uint8
 
 func isInvertible(L []uint8) bool
 
-func solve(A, b []uint8) []uint8
+func solve(A, b []uint8, m int) []uint8 {
+	Ab := make([]uint8, 0)
+	for i := 0; i < m; i++ {
+		for j := 0; j < m; j++ {
+			Ab = append(Ab, A[i*m+j])
+		}
+		Ab = append(Ab, b[i])
+	}
+	if len(Ab) != (m+1)*(m+1) {
+
+	}
+
+	for i := 0; i < m; i++ {
+		for j := i + 1; j < m; j++ {
+			if Ab[i*m+i] == 0 {
+				for k := i; k < m; k++ {
+					Ab[i*m+k] ^= Ab[j*m+k]
+				}
+			}
+		}
+		if Ab[i*m+i] == 0 {
+			return nil
+		}
+		pi := math.Inv(Ab[i*m+i])
+	}
+}
