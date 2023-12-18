@@ -35,7 +35,7 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 	sk := new(MQATSecretKey)
 	pk := new(MQATPublicKey)
 
-	uov_sk, uov_pk := mqat.uov.KeyGen(mqat.m, mqat.n)
+	uov_sk, uov_pk := mqat.uov.KeyGen()
 	if uov_sk == nil || uov_pk == nil {
 		logrus.Error("Could not generate UOV public key")
 		return nil, nil
