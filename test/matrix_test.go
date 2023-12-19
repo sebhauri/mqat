@@ -59,6 +59,36 @@ func TestMatTranspose(t *testing.T) {
 	}
 }
 
+func TestMatUpperTriangle(t *testing.T) {
+	inp1 := math.NewDenseMatrix(3, 3, []uint8{
+		1, 2, 3,
+		0, 4, 5,
+		0, 0, 6})
+	inp2 := math.NewDenseMatrix(3, 3, []uint8{
+		1, 2, 3,
+		4, 5,
+		6})
+	inpUT := math.NewUpperTriangle(inp2)
+	r1, c1 := inp1.Dims()
+	r2, c2 := inpUT.Dims()
+	if r1 != r2 || c1 != c2 {
+		t.Error("bad dimensions for UT matrix")
+		return
+	}
+
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			a := inp1.At(i, j)
+			b := inpUT.At(i, j)
+			t.Logf("(%d, %d) : %d  %d)", i, j, a, b)
+			if a != b {
+				t.Error("bad indexes UT matrix")
+				return
+			}
+		}
+	}
+}
+
 func TestMatAdd(t *testing.T) {
 	inp := math.NewDenseMatrix(2, 3, []uint8{
 		1, 2, 3,

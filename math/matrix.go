@@ -73,7 +73,7 @@ func NewUpperTriangle(M Matrix) UpperTriangle {
 }
 
 func (u UpperTriangle) At(i, j int) uint8 {
-	if i < j {
+	if j < i {
 		return 0
 	}
 	return u.m.At(i, j-i*(i-1)/2-i)
