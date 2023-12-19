@@ -64,10 +64,9 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 	lenSi := (uov.n - uov.m) * uov.m
 	lenPi := (uov.n - uov.m) * (uov.n - uov.m)
-	var ctr uint8 = 0
-	for ctr = 0; ctr <= 255; ctr++ {
+	for ctr := 0; ctr < 256; ctr++ {
 		seed := append(message, sk.seed_sk...)
-		seed = append(seed, ctr)
+		seed = append(seed, byte(ctr))
 		v := Nrand256(uov.n-uov.m, seed)
 		L := make([]uint8, 0)
 		vec := math.NewVector(v)
@@ -213,7 +212,7 @@ func solve(A, b []uint8, m int) []uint8 {
 		}
 		Ab = append(Ab, b[i])
 	}
-	if len(Ab) != (m+1)*(m+1) {
+	if len(Ab) != (m+1)*m {
 		return nil
 	}
 
@@ -246,7 +245,7 @@ func solve(A, b []uint8, m int) []uint8 {
 	}
 
 	res := make([]uint8, 0)
-	for i := m; i < (m+1)*(m+1); i = i + m + 1 {
+	for i := m; i < (m+1)*m; i = i + m + 1 {
 		res = append(res, Ab[i])
 	}
 	return res
