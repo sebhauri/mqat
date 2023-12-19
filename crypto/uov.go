@@ -55,7 +55,7 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 	if Pi3 == nil {
 		return nil, nil
 	}
-	uov_pk.quadratic_map_p = formPi(Pi1, Pi2, Pi3)
+	uov_pk.quadratic_map_p = formPi(Pi1, Pi2, Pi3, uov.m, uov.n)
 
 	return uov_sk, uov_pk
 }
@@ -93,6 +93,9 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 				y[i] ^= res.Data[0]
 			}
 			x := solve(L, y, uov.m)
+			if x == nil {
+				continue
+			}
 			for i := 0; i < uov.n-uov.m; i++ {
 				var acc uint8 = 0
 				for j := 0; j < uov.m; j++ {
@@ -147,10 +150,32 @@ func deriveSi(O, Pi1, Pi2 []uint8, m, n int) []uint8 {
 }
 
 func derivePi3(O, Pi1, Pi2 []uint8, m, n int) []uint8 {
-	return nil
+	Omat := math.NewDenseMatrix(n-m, m, O)
+	OmatT := math.T(Omat)
+	lenP1 := (n - m) * (n - m + 1) / 2
+	lenP2 := (n - m) * m
+	res := make([]uint8, 0)
+	for i := 0; i < m; i++ {
+		P1 := math.NewUpperTriangle(math.NewDenseMatrix(n-m, n-m, Pi1[i*lenP1:(i+1)*lenP1]))
+		P2 := math.NewDenseMatrix(n-m, m, Pi2[i*lenP2:(i+1)*lenP2])
+		M := math.AddMat(math.MulMat(math.MulMat(OmatT, P1), Omat), math.MulMat(OmatT, P2))
+		r, c := M.Dims()
+		if r != m || c != m {
+			return nil
+		}
+		MT := math.T(M)
+		M_plus_MT := math.AddMat(M, MT)
+		for i := 0; i < m; i++ {
+			res = append(res, M.At(i, i))
+			for j := i + 1; j < m; j++ {
+				res = append(res, M_plus_MT.At(i, j))
+			}
+		}
+	}
+	return res
 }
 
-func formPi(Pi1, Pi2, Pi3 []uint8) []uint8 {
+func formPi(Pi1, Pi2, Pi3 []uint8, m, n int) []uint8 {
 	return nil
 }
 

@@ -161,3 +161,15 @@ func AddMat(A, B Matrix) *Dense {
 
 	return res
 }
+
+func ScaleMat(M Matrix, v uint8) *Dense {
+	rows, cols := M.Dims()
+	res := NewDenseMatrix(rows, cols, nil)
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			val := Mul(v, M.At(i, j))
+			res.Set(i, j, val)
+		}
+	}
+	return res
+}
