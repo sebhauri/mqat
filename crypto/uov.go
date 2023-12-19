@@ -55,8 +55,9 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 	if Pi3 == nil {
 		return nil, nil
 	}
-	uov_pk.quadratic_map_p = formPi(Pi1, Pi2, Pi3, uov.m, uov.n)
-
+	uov_pk.matrices_p1i = Pi1
+	uov_pk.matrices_p2i = Pi2
+	uov_pk.matrices_p3i = Pi3
 	return uov_sk, uov_pk
 }
 
@@ -112,21 +113,46 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 
 func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
 	vec := math.NewVector(signature)
-	vecT := math.T(vec)
-	lenP := uov.n * (uov.n + 1) / 2
-	for i := 0; i < uov.m; i++ {
-		mat := math.NewUpperTriangle(
-			math.NewDenseMatrix(uov.m, uov.n,
-				pk.quadratic_map_p[i*lenP:(i+1*lenP)]))
-		res := math.MulMat(math.MulMat(vecT, mat), vec)
-		if len(res.Data) != 1 {
-			return false
+
+	lenP1 := (uov.n - uov.m) * (uov.n - uov.m + 1) / 2
+	lenP2 := (uov.n - uov.m) * uov.m
+	lenP3 := uov.m * (uov.m + 1) / 2
+
+	res := make([]uint8, 0)
+	for k := 0; k < uov.m; k++ {
+		var acc uint8 = 0
+		P1 := math.NewUpperTriangle(
+			math.NewDenseMatrix(
+				uov.n-uov.m, uov.n-uov.m,
+				pk.matrices_p1i[k*lenP1:(k+1)*lenP1],
+			),
+		)
+		P2 := math.NewDenseMatrix(
+			uov.n-uov.m, uov.m, pk.matrices_p2i[k*lenP2:(k+1)*lenP2],
+		)
+		P3 := math.NewUpperTriangle(
+			math.NewDenseMatrix(
+				uov.m, uov.m, pk.matrices_p3i[k*lenP3:(k+1)*lenP3],
+			),
+		)
+		for i := 0; i < uov.n; i++ {
+			for j := i; j < uov.n; j++ {
+				t := math.Mul(vec.At(i, 0), vec.At(j, 0))
+				if j < uov.n-uov.m {
+					acc ^= math.Mul(t, P1.At(i, j))
+				} else {
+					if i < uov.n-uov.m {
+						acc ^= math.Mul(t, P2.At(i, j))
+					} else {
+						acc ^= math.Mul(t, P3.At(i, j))
+					}
+				}
+			}
 		}
-		if message[i] != res.Data[0] {
-			return false
-		}
+
+		res = append(res, acc)
 	}
-	return true
+	return bytes.Equal(message, res)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -173,10 +199,6 @@ func derivePi3(O, Pi1, Pi2 []uint8, m, n int) []uint8 {
 		}
 	}
 	return res
-}
-
-func formPi(Pi1, Pi2, Pi3 []uint8, m, n int) []uint8 {
-	return nil
 }
 
 func isInvertible(L []uint8) bool {
