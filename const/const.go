@@ -2,7 +2,7 @@ package constants
 
 // General
 const LAMBDA = 128
-const MEASURE_ROUNDS = 10
+const MEASURE_ROUNDS = 1
 const Q = 256
 const M = 44
 const N = 112

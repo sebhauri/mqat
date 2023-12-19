@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 
+	"github.com/sirupsen/logrus"
 	"sebastienhauri.ch/mqt/math"
 )
 
@@ -55,9 +56,9 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 	if Pi3 == nil {
 		return nil, nil
 	}
-	uov_pk.matrices_p1i = Pi1
-	uov_pk.matrices_p2i = Pi2
-	uov_pk.matrices_p3i = Pi3
+	uov_pk.P1i = Pi1
+	uov_pk.P2i = Pi2
+	uov_pk.P3i = Pi3
 	return uov_sk, uov_pk
 }
 
@@ -92,7 +93,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 				}
 				y[i] ^= res.Data[0]
 			}
-			x := solve(L, y, uov.m)
+			x := Solve(L, y, uov.m)
 			if x == nil {
 				continue
 			}
@@ -123,15 +124,15 @@ func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
 		P1 := math.NewUpperTriangle(
 			math.NewDenseMatrix(
 				uov.n-uov.m, uov.n-uov.m,
-				pk.matrices_p1i[k*lenP1:(k+1)*lenP1],
+				pk.P1i[k*lenP1:(k+1)*lenP1],
 			),
 		)
 		P2 := math.NewDenseMatrix(
-			uov.n-uov.m, uov.m, pk.matrices_p2i[k*lenP2:(k+1)*lenP2],
+			uov.n-uov.m, uov.m, pk.P2i[k*lenP2:(k+1)*lenP2],
 		)
 		P3 := math.NewUpperTriangle(
 			math.NewDenseMatrix(
-				uov.m, uov.m, pk.matrices_p3i[k*lenP3:(k+1)*lenP3],
+				uov.m, uov.m, pk.P3i[k*lenP3:(k+1)*lenP3],
 			),
 		)
 		for i := 0; i < uov.n; i++ {
@@ -141,16 +142,16 @@ func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
 					acc ^= math.Mul(t, P1.At(i, j))
 				} else {
 					if i < uov.n-uov.m {
-						acc ^= math.Mul(t, P2.At(i, j))
+						acc ^= math.Mul(t, P2.At(i, j-uov.n+uov.m))
 					} else {
-						acc ^= math.Mul(t, P3.At(i, j))
+						acc ^= math.Mul(t, P3.At(i-uov.n+uov.m, j-uov.n+uov.m))
 					}
 				}
 			}
 		}
-
 		res = append(res, acc)
 	}
+	logrus.Println(res)
 	return bytes.Equal(message, res)
 }
 
@@ -204,7 +205,7 @@ func isInvertible(L []uint8) bool {
 	return true
 }
 
-func solve(A, b []uint8, m int) []uint8 {
+func Solve(A, b []uint8, m int) []uint8 {
 	Ab := make([]uint8, 0)
 	for i := 0; i < m; i++ {
 		for j := 0; j < m; j++ {
@@ -218,34 +219,34 @@ func solve(A, b []uint8, m int) []uint8 {
 
 	for i := 0; i < m; i++ {
 		for j := i + 1; j < m; j++ {
-			if Ab[i*m+i] == 0 {
-				for k := i; k < m; k++ {
-					Ab[i*m+k] ^= Ab[j*m+k]
+			if Ab[i*(m+1)+i] == 0 {
+				for k := i; k < m+1; k++ {
+					Ab[i*(m+1)+k] ^= Ab[j*(m+1)+k]
 				}
 			}
 		}
-		if Ab[i*m+i] == 0 {
+		if Ab[i*(m+1)+i] == 0 {
 			return nil
 		}
-		pi := math.Inv(Ab[i*m+i])
+		pi := math.Inv(Ab[i*(m+1)+i])
 		for k := i; k < m+1; k++ {
-			Ab[i*m+k] = math.Mul(pi, Ab[i*m+k])
+			Ab[i*(m+1)+k] = math.Mul(pi, Ab[i*(m+1)+k])
 		}
 		for j := i + 1; j < m; j++ {
 			for k := i; k < m+1; k++ {
-				Ab[j*m+k] = Ab[j*m+k] ^ math.Mul(Ab[j*m+i], Ab[i*m+k])
+				Ab[j*(m+1)+k] ^= math.Mul(Ab[j*(m+1)+i], Ab[i*(m+1)+k])
 			}
 		}
 	}
 
 	for i := m - 1; i > 0; i-- {
 		for j := 0; j < i; j++ {
-			Ab[j*m+m] = Ab[j*m+m] ^ math.Mul(Ab[i*m+j], Ab[i*m+m])
+			Ab[j*(m+1)+m] ^= math.Mul(Ab[i*(m+1)+j], Ab[i*(m+1)+m])
 		}
 	}
 
 	res := make([]uint8, 0)
-	for i := m; i < (m+1)*m; i = i + m + 1 {
+	for i := m; i < (m+1)*m; i += m + 1 {
 		res = append(res, Ab[i])
 	}
 	return res

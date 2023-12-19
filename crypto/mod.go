@@ -44,10 +44,10 @@ type UOVSecretKey struct {
 }
 
 type UOVPublicKey struct {
-	seed_pk      []byte
-	matrices_p1i []uint8
-	matrices_p2i []uint8
-	matrices_p3i []uint8
+	seed_pk []byte
+	P1i     []uint8
+	P2i     []uint8
+	P3i     []uint8
 }
 
 // //////////////////////////////////////

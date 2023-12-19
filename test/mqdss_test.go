@@ -8,7 +8,7 @@ import (
 	"sebastienhauri.ch/mqt/math"
 )
 
-func TestCorrectness(t *testing.T) {
+func TestMQDSSCorrectness(t *testing.T) {
 	x_seed := []byte{0}
 	F_seed := []byte{1}
 	seed := []byte{2}

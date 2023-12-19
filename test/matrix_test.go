@@ -107,3 +107,23 @@ func TestMatAdd(t *testing.T) {
 		t.Error("matrix sub did not match expectation")
 	}
 }
+
+func TestMatMul(t *testing.T) {
+	inp := math.NewDenseMatrix(2, 3, []uint8{
+		1, 2, 3,
+		4, 5, 6,
+	})
+	sub := math.NewDenseMatrix(3, 2, []uint8{
+		2, 3,
+		4, 5,
+		6, 7,
+	})
+	exp := math.NewDenseMatrix(2, 2, []uint8{
+		0, 0,
+		8, 15,
+	})
+	out := math.MulMat(inp, sub)
+	if !matrixEqual(exp, out) {
+		t.Error("matrix sub did not match expectation")
+	}
+}
