@@ -75,9 +75,8 @@ func NewUpperTriangle(M Matrix) UpperTriangle {
 func (u UpperTriangle) At(i, j int) uint8 {
 	if i < j {
 		return 0
-	} else {
-		return u.m.At(i, j-i*(i-1)/2-i)
 	}
+	return u.m.At(i, j-i*(i-1)/2-i)
 }
 
 func (u UpperTriangle) Dims() (int, int) {
@@ -87,9 +86,40 @@ func (u UpperTriangle) Dims() (int, int) {
 func (u UpperTriangle) Set(i, j int, v uint8) {
 	if i < j {
 		return
-	} else {
-		u.m.Set(i, j-i*(i-1)/2-i, v)
 	}
+	u.m.Set(i, j-i*(i-1)/2-i, v)
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type Vector struct {
+	Matrix
+	Data []uint8
+}
+
+func NewVector(data []uint8) Vector {
+	if data == nil {
+		data = make([]uint8, 0)
+	}
+	return Vector{Data: data}
+}
+
+func (v Vector) At(i, j int) uint8 {
+	if j != 0 {
+		panic("")
+	}
+	return v.Data[i]
+}
+
+func (v Vector) Dims() (int, int) {
+	return len(v.Data), 1
+}
+
+func (v Vector) Set(i, j int, val uint8) {
+	if j != 0 {
+		panic("")
+	}
+	v.Data[i] = val
 }
 
 ////////////////////////////////////////////////////////////////////////////////

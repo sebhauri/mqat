@@ -61,33 +61,36 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 }
 
 func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
+	lenSi := (uov.n - uov.m) * uov.m
+	lenPi := (uov.n - uov.m) * (uov.n - uov.m)
 	var ctr uint8 = 0
 	for ctr = 0; ctr <= 255; ctr++ {
 		seed := append(message, sk.seed_sk...)
 		seed = append(seed, ctr)
 		v := Nrand256(uov.n-uov.m, seed)
 		L := make([]uint8, 0)
+		vec := math.NewVector(v)
+		vec_t := math.T(vec)
 		for i := 0; i < uov.m; i++ {
-			for j := 0; j < uov.m; j++ {
-				var acc uint8 = 0
-				for k := 0; k < uov.n-uov.m; k++ {
-					acc ^= math.Mul(v[k],
-						sk.matrices_si[i*(uov.n-uov.m)*uov.m+k*(uov.n-uov.m)+j])
-				}
-				L = append(L, acc)
+			Si := math.NewDenseMatrix(uov.n-uov.m, uov.m,
+				sk.matrices_si[i*lenSi:(i+1)*lenSi])
+			res := math.MulMat(vec_t, Si)
+			if len(res.Data) != uov.m {
+				return nil
 			}
+			L = append(L, res.Data...)
 		}
 		if isInvertible(L) {
 			y := bytes.Clone(message)
-			for i := 0; i < uov.n-uov.m; i++ {
-				for j := i; j < uov.n-uov.m; j++ {
-					t := math.Mul(v[i], v[j])
-					for k := 0; k < uov.m; k++ {
-						ijk := uov.m*(i*uov.n-i*uov.m-i*(i+1)/2*uov.m) + uov.m*j + k
-						y[k] ^= math.Mul(sk.matrices_p1i[ijk], t)
-
-					}
+			for i := 0; i < uov.m; i++ {
+				Pi := math.NewUpperTriangle(
+					math.NewDenseMatrix(uov.n-uov.m, uov.n-uov.m,
+						sk.matrices_p1i[i*lenPi:(i+1)*lenPi]))
+				res := math.MulMat(math.MulMat(vec_t, Pi), vec)
+				if len(res.Data) != 1 {
+					return nil
 				}
+				y[i] ^= res.Data[0]
 			}
 			x := solve(L, y, uov.m)
 			for i := 0; i < uov.n-uov.m; i++ {
@@ -105,7 +108,21 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 }
 
 func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
-
+	vec := math.NewVector(signature)
+	vecT := math.T(vec)
+	lenP := uov.n * (uov.n + 1) / 2
+	for i := 0; i < uov.m; i++ {
+		mat := math.NewUpperTriangle(
+			math.NewDenseMatrix(uov.m, uov.n,
+				pk.quadratic_map_p[i*lenP:(i+1*lenP)]))
+		res := math.MulMat(math.MulMat(vecT, mat), vec)
+		if len(res.Data) != 1 {
+			return false
+		}
+		if message[i] != res.Data[0] {
+			return false
+		}
+	}
 	return true
 }
 
