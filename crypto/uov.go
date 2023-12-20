@@ -10,10 +10,10 @@ import (
 
 func NewUOV(m, n, pk_seed_len, sk_seed_len int) *UOV {
 	uov := new(UOV)
-	uov.m = m
-	uov.n = n
-	uov.pk_seed_len = pk_seed_len
-	uov.sk_seed_len = sk_seed_len
+	uov.M = m
+	uov.N = n
+	uov.PkSeedLen = pk_seed_len
+	uov.SkSeedLen = sk_seed_len
 	return uov
 }
 
@@ -21,27 +21,27 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 	uov_sk := new(UOVSecretKey)
 	uov_pk := new(UOVPublicKey)
 
-	uov_seed_sk := make([]byte, uov.sk_seed_len/8)
+	uov_seed_sk := make([]byte, uov.SkSeedLen/8)
 	_, err := rand.Read(uov_seed_sk)
 	if err != nil {
 		return nil, nil
 	}
-	uov_seed_pk := make([]byte, uov.sk_seed_len/8)
+	uov_seed_pk := make([]byte, uov.PkSeedLen/8)
 	_, err = rand.Read(uov_seed_pk)
 	if err != nil {
 		return nil, nil
 	}
-	uov_sk.seed_sk = bytes.Clone(uov_seed_sk)
-	uov_pk.seed_pk = bytes.Clone(uov_seed_pk)
+	uov_sk.Seed = bytes.Clone(uov_seed_sk)
+	uov_pk.Seed = bytes.Clone(uov_seed_pk)
 
-	O := Nrand256(uov.m*(uov.n-uov.m), uov_seed_sk)
+	O := Nrand256(uov.M*(uov.N-uov.M), uov_seed_sk)
 	if O == nil {
 		return nil, nil
 	}
-	uov_sk.trapdoor_o = O
+	uov_sk.O = O
 
-	P1s_output_len := uov.m * (uov.n - uov.m) * (uov.n - uov.m + 1) / 2
-	P2s_output_len := uov.m * uov.m * (uov.n - uov.m)
+	P1s_output_len := uov.M * (uov.N - uov.M) * (uov.N - uov.M + 1) / 2
+	P2s_output_len := uov.M * uov.M * (uov.N - uov.M)
 	total_len := P1s_output_len + P2s_output_len
 	Pi12 := Nrand128(total_len, uov_seed_pk)
 	Pi1 := Pi12[:P1s_output_len]
@@ -49,10 +49,10 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 	if Pi1 == nil || Pi2 == nil {
 		return nil, nil
 	}
-	uov_sk.matrices_p1i = Pi1
-	uov_sk.matrices_si = deriveSi(O, Pi1, Pi2, uov.m, uov.n)
+	uov_sk.P1i = Pi1
+	uov_sk.Si = deriveSi(O, Pi1, Pi2, uov.M, uov.N)
 
-	Pi3 := derivePi3(O, Pi1, Pi2, uov.m, uov.n)
+	Pi3 := derivePi3(O, Pi1, Pi2, uov.M, uov.N)
 	if Pi3 == nil {
 		return nil, nil
 	}
@@ -63,44 +63,44 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 }
 
 func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
-	lenSi := (uov.n - uov.m) * uov.m
-	lenPi := (uov.n - uov.m) * (uov.n - uov.m)
+	lenSi := (uov.N - uov.M) * uov.M
+	lenPi := (uov.N - uov.M) * (uov.N - uov.M)
 	for ctr := 0; ctr < 256; ctr++ {
-		seed := append(message, sk.seed_sk...)
+		seed := append(message, sk.Seed...)
 		seed = append(seed, byte(ctr))
-		v := Nrand256(uov.n-uov.m, seed)
+		v := Nrand256(uov.N-uov.M, seed)
 		L := make([]uint8, 0)
 		vec := math.NewVector(v)
 		vec_t := math.T(vec)
-		for i := 0; i < uov.m; i++ {
-			Si := math.NewDenseMatrix(uov.n-uov.m, uov.m,
-				sk.matrices_si[i*lenSi:(i+1)*lenSi])
+		for i := 0; i < uov.M; i++ {
+			Si := math.NewDenseMatrix(uov.N-uov.M, uov.M,
+				sk.Si[i*lenSi:(i+1)*lenSi])
 			res := math.MulMat(vec_t, Si)
-			if len(res.Data) != uov.m {
+			if len(res.Data) != uov.M {
 				return nil
 			}
 			L = append(L, res.Data...)
 		}
 		if isInvertible(L) {
 			y := bytes.Clone(message)
-			for i := 0; i < uov.m; i++ {
+			for i := 0; i < uov.M; i++ {
 				Pi := math.NewUpperTriangle(
-					math.NewDenseMatrix(uov.n-uov.m, uov.n-uov.m,
-						sk.matrices_p1i[i*lenPi:(i+1)*lenPi]))
+					math.NewDenseMatrix(uov.N-uov.M, uov.N-uov.M,
+						sk.P1i[i*lenPi:(i+1)*lenPi]))
 				res := math.MulMat(math.MulMat(vec_t, Pi), vec)
 				if len(res.Data) != 1 {
 					return nil
 				}
 				y[i] ^= res.Data[0]
 			}
-			x := Solve(L, y, uov.m)
+			x := Solve(L, y, uov.M)
 			if x == nil {
 				continue
 			}
-			for i := 0; i < uov.n-uov.m; i++ {
+			for i := 0; i < uov.N-uov.M; i++ {
 				var acc uint8 = 0
-				for j := 0; j < uov.m; j++ {
-					acc ^= math.Mul(sk.trapdoor_o[i+j*(uov.n-uov.m)], x[j])
+				for j := 0; j < uov.M; j++ {
+					acc ^= math.Mul(sk.O[i+j*(uov.N-uov.M)], x[j])
 				}
 				v[i] ^= acc
 			}
@@ -114,37 +114,37 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
 	vec := math.NewVector(signature)
 
-	lenP1 := (uov.n - uov.m) * (uov.n - uov.m + 1) / 2
-	lenP2 := (uov.n - uov.m) * uov.m
-	lenP3 := uov.m * (uov.m + 1) / 2
+	lenP1 := (uov.N - uov.M) * (uov.N - uov.M + 1) / 2
+	lenP2 := (uov.N - uov.M) * uov.M
+	lenP3 := uov.M * (uov.M + 1) / 2
 
 	res := make([]uint8, 0)
-	for k := 0; k < uov.m; k++ {
+	for k := 0; k < uov.M; k++ {
 		var acc uint8 = 0
 		P1 := math.NewUpperTriangle(
 			math.NewDenseMatrix(
-				uov.n-uov.m, uov.n-uov.m,
+				uov.N-uov.M, uov.N-uov.M,
 				pk.P1i[k*lenP1:(k+1)*lenP1],
 			),
 		)
 		P2 := math.NewDenseMatrix(
-			uov.n-uov.m, uov.m, pk.P2i[k*lenP2:(k+1)*lenP2],
+			uov.N-uov.M, uov.M, pk.P2i[k*lenP2:(k+1)*lenP2],
 		)
 		P3 := math.NewUpperTriangle(
 			math.NewDenseMatrix(
-				uov.m, uov.m, pk.P3i[k*lenP3:(k+1)*lenP3],
+				uov.M, uov.M, pk.P3i[k*lenP3:(k+1)*lenP3],
 			),
 		)
-		for i := 0; i < uov.n; i++ {
-			for j := i; j < uov.n; j++ {
+		for i := 0; i < uov.N; i++ {
+			for j := i; j < uov.N; j++ {
 				t := math.Mul(vec.At(i, 0), vec.At(j, 0))
-				if j < uov.n-uov.m {
+				if j < uov.N-uov.M {
 					acc ^= math.Mul(t, P1.At(i, j))
 				} else {
-					if i < uov.n-uov.m {
-						acc ^= math.Mul(t, P2.At(i, j-uov.n+uov.m))
+					if i < uov.N-uov.M {
+						acc ^= math.Mul(t, P2.At(i, j-uov.N+uov.M))
 					} else {
-						acc ^= math.Mul(t, P3.At(i-uov.n+uov.m, j-uov.n+uov.m))
+						acc ^= math.Mul(t, P3.At(i-uov.N+uov.M, j-uov.N+uov.M))
 					}
 				}
 			}

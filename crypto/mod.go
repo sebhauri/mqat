@@ -31,23 +31,23 @@ type MQATToken struct {
 // UOV
 // //////////////////////////////////////
 type UOV struct {
-	m, n        int
-	pk_seed_len int
-	sk_seed_len int
+	M, N      int
+	PkSeedLen int
+	SkSeedLen int
 }
 
 type UOVSecretKey struct {
-	seed_sk      []byte
-	trapdoor_o   []uint8
-	matrices_p1i []uint8
-	matrices_si  []uint8
+	Seed []byte
+	O    []uint8
+	P1i  []uint8
+	Si   []uint8
 }
 
 type UOVPublicKey struct {
-	seed_pk []byte
-	P1i     []uint8
-	P2i     []uint8
-	P3i     []uint8
+	Seed []byte
+	P1i  []uint8
+	P2i  []uint8
+	P3i  []uint8
 }
 
 // //////////////////////////////////////
@@ -60,8 +60,8 @@ type MQDSS struct {
 }
 
 type MQDSSPublicKey struct {
-	seed []byte
-	v    []uint8
+	Seed []byte
+	V    []uint8
 }
 type MQDSSSecretKey struct {
 	sk   []byte

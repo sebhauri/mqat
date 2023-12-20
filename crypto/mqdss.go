@@ -32,8 +32,8 @@ func (mqdss *MQDSS) KeyPair() (*MQDSSSecretKey, *MQDSSPublicKey) {
 	}
 	sk.sk = sk_sf[len(sk_sf)/2:]
 	sk.seed = sk_sf[:len(sk_sf)/2]
-	pk.seed = sk_sf[:len(sk_sf)/2]
-	F := Nrand128(mqdss.flen, pk.seed)
+	pk.Seed = sk_sf[:len(sk_sf)/2]
+	F := Nrand128(mqdss.flen, pk.Seed)
 	if F == nil {
 		return nil, nil
 	}
@@ -45,7 +45,7 @@ func (mqdss *MQDSS) KeyPair() (*MQDSSSecretKey, *MQDSSPublicKey) {
 	if pk_gf256 == nil {
 		return nil, nil
 	}
-	pk.v = pk_gf256
+	pk.V = pk_gf256
 	return sk, pk
 }
 
@@ -131,7 +131,7 @@ func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
 }
 
 func (mqdss *MQDSS) Verify(message Message, sig Signature, pk *MQDSSPublicKey) bool {
-	F := Nrand128(mqdss.flen, pk.seed)
+	F := Nrand128(mqdss.flen, pk.Seed)
 	C := bytes.Clone(sig[:constants.HASH_BYTES])
 	tohash := append(C, message...)
 	D := H(tohash)
@@ -179,7 +179,7 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk *MQDSSPublicKey) b
 				y := math.MQ(F, r_ch, mqdss.M)
 				z := math.G(F, r_ch, t1, mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
-					yj := math.Mul(alphas[i], pk.v[j]^y[j]) ^ z[j] ^ uint8(e1[j])
+					yj := math.Mul(alphas[i], pk.V[j]^y[j]) ^ z[j] ^ uint8(e1[j])
 					y[j] = yj
 				}
 				c = append(c, c_ch...)
