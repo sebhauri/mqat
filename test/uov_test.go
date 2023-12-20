@@ -73,18 +73,23 @@ func TestUOVCorrectness(t *testing.T) {
 	uov := crypto.NewUOV(m, n, constants.UOV_PK_SEED_LEN, constants.UOV_SK_SEED_LEN)
 	sk, pk := uov.KeyGen()
 
-	msg := crypto.Nrand128(constants.N, []byte{0})
-	t.Log(len(msg), "x =", msg)
-	res := mq(m, n, msg, pk)
-	t.Log(len(res), "P(x) =", res)
+	x := crypto.Nrand128(constants.N, []byte{0})
+	t.Log(len(x), "x =", x)
+	Px := mq(m, n, x, pk)
+	t.Log(len(Px), "P(x) =", Px)
 
-	if !uov.Verify(res, msg, pk) {
+	if !uov.Verify(Px, x, pk) {
 		t.Error("Evaluation does not verify")
 		return
 	}
 
-	sig := uov.Sign(msg, sk)
+	sig := uov.Sign(Px, sk)
 	t.Log(len(sig), "x' =", sig)
+
+	if !uov.Verify(Px, x, pk) {
+		t.Error("Signature does not verify")
+		return
+	}
 
 	res2 := mq(m, n, sig, pk)
 	t.Log(len(res2), "P(x') =", res2)

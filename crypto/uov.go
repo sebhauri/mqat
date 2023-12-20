@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 
-	"github.com/sirupsen/logrus"
 	"sebastienhauri.ch/mqt/math"
 )
 
@@ -64,7 +63,7 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 
 func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 	lenSi := (uov.N - uov.M) * uov.M
-	lenPi := (uov.N - uov.M) * (uov.N - uov.M)
+	lenP1i := (uov.N - uov.M) * (uov.N - uov.M + 1) / 2
 	for ctr := 0; ctr < 256; ctr++ {
 		seed := append(message, sk.Seed...)
 		seed = append(seed, byte(ctr))
@@ -81,32 +80,39 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 			}
 			L = append(L, res.Data...)
 		}
-		if isInvertible(L) {
-			y := bytes.Clone(message)
-			for i := 0; i < uov.M; i++ {
-				Pi := math.NewUpperTriangle(
-					math.NewDenseMatrix(uov.N-uov.M, uov.N-uov.M,
-						sk.P1i[i*lenPi:(i+1)*lenPi]))
-				res := math.MulMat(math.MulMat(vec_t, Pi), vec)
-				if len(res.Data) != 1 {
-					return nil
-				}
-				y[i] ^= res.Data[0]
+		y := bytes.Clone(message)
+		for i := 0; i < uov.M; i++ {
+			P1i := math.NewUpperTriangle(
+				math.NewDenseMatrix(uov.N-uov.M, uov.N-uov.M,
+					sk.P1i[i*lenP1i:(i+1)*lenP1i]))
+			res := math.MulMat(math.MulMat(vec_t, P1i), vec)
+			if len(res.Data) != 1 {
+				return nil
 			}
-			x := Solve(L, y, uov.M)
-			if x == nil {
-				continue
-			}
-			for i := 0; i < uov.N-uov.M; i++ {
-				var acc uint8 = 0
-				for j := 0; j < uov.M; j++ {
-					acc ^= math.Mul(sk.O[i+j*(uov.N-uov.M)], x[j])
-				}
-				v[i] ^= acc
-			}
-			s := append(v, x...)
-			return s
+			y[i] ^= res.Data[0]
 		}
+		x := Solve(L, y, uov.M)
+		if x == nil {
+			continue
+		}
+		vecX := math.NewVector(x)
+		O := sk.O
+		for i := 0; i < uov.M; i++ {
+			e := make([]uint8, uov.M)
+			e[i] = 1
+			O = append(O, e...)
+		}
+		OBar := math.NewDenseMatrix(uov.N, uov.M, O)
+		res := math.MulMat(OBar, vecX)
+		if len(res.Data) != uov.N {
+			return nil
+		}
+
+		v = append(v, make([]uint8, uov.M)...)
+		for i := 0; i < uov.N; i++ {
+			v[i] ^= res.Data[i]
+		}
+		return v
 	}
 	return nil
 }
@@ -151,7 +157,6 @@ func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
 		}
 		res = append(res, acc)
 	}
-	logrus.Println(res)
 	return bytes.Equal(message, res)
 }
 

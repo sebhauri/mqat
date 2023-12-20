@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	constants "sebastienhauri.ch/mqt/const"
 	"sebastienhauri.ch/mqt/crypto"
 )
 
 func main() {
-	fmt.Printf("Initialising an MQAT with m=%d and n=%d ..\n", constants.M, constants.N)
 	fmt.Printf("The number of measure rounds is set to %d.\n\n", constants.MEASURE_ROUNDS)
 
 	println("===== UOV =====")
 	uov := crypto.NewUOV(constants.M, constants.N, constants.UOV_PK_SEED_LEN, constants.UOV_SK_SEED_LEN)
+	fmt.Printf("Initialising an UOV with m=%d and n=%d ..\n", uov.M, uov.N)
 	var uov_sk *crypto.UOVSecretKey
 	var uov_pk *crypto.UOVPublicKey
 	println("Benchmarking key generation..")
@@ -32,7 +31,6 @@ func main() {
 	println("Benchmarking signature..")
 	var sig []uint8
 	message := crypto.Nrand128(constants.M, []byte{0})
-	logrus.Println(message)
 	start = time.Now()
 	for i := 0; i < constants.MEASURE_ROUNDS; i++ {
 		sig = uov.Sign(message, uov_sk)
@@ -60,7 +58,8 @@ func main() {
 	println()
 
 	println("===== MQDSS =====")
-	mqdss := crypto.NewMQDSS(constants.M, constants.N+constants.M, constants.MQDSS_ROUNDS)
+	mqdss := crypto.NewMQDSS(uov.M, uov.N+uov.M, constants.MQDSS_ROUNDS)
+	fmt.Printf("Initialising an MQDSS with m=%d, n=%d, r=%d ..\n", mqdss.M, mqdss.N, mqdss.R)
 	var mqdss_sk *crypto.MQDSSSecretKey
 	var mqdss_pk *crypto.MQDSSPublicKey
 	println("Benchmarking key generation..")
