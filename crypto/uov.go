@@ -217,37 +217,41 @@ func Solve(A, b []uint8, m int) []uint8 {
 		return nil
 	}
 
+	AbMat := math.NewDenseMatrix(m, m+1, Ab)
 	for i := 0; i < m; i++ {
 		for j := i + 1; j < m; j++ {
-			if Ab[i*(m+1)+i] == 0 {
+			if AbMat.At(i, i) == 0 {
 				for k := i; k < m+1; k++ {
-					Ab[i*(m+1)+k] ^= Ab[j*(m+1)+k]
+					AbMat.Set(i, k, AbMat.At(i, k)^AbMat.At(j, k))
 				}
 			}
 		}
-		if Ab[i*(m+1)+i] == 0 {
+		if AbMat.At(i, i) == 0 {
 			return nil
 		}
-		pi := math.Inv(Ab[i*(m+1)+i])
+		pi := math.Inv(AbMat.At(i, i))
 		for k := i; k < m+1; k++ {
-			Ab[i*(m+1)+k] = math.Mul(pi, Ab[i*(m+1)+k])
+			AbMat.Set(i, k, math.Mul(pi, AbMat.At(i, k)))
 		}
 		for j := i + 1; j < m; j++ {
+			aji := AbMat.At(j, i)
 			for k := i; k < m+1; k++ {
-				Ab[j*(m+1)+k] ^= math.Mul(Ab[j*(m+1)+i], Ab[i*(m+1)+k])
+				AbMat.Set(j, k, AbMat.At(j, k)^math.Mul(aji, AbMat.At(i, k)))
 			}
 		}
 	}
 
 	for i := m - 1; i > 0; i-- {
+		aim := AbMat.At(i, m)
 		for j := 0; j < i; j++ {
-			Ab[j*(m+1)+m] ^= math.Mul(Ab[i*(m+1)+j], Ab[i*(m+1)+m])
+			AbMat.Set(j, m, AbMat.At(j, m)^math.Mul(AbMat.At(j, i), aim))
 		}
 	}
 
 	res := make([]uint8, 0)
-	for i := m; i < (m+1)*m; i += m + 1 {
-		res = append(res, Ab[i])
+	r, c := AbMat.Dims()
+	for i := 0; i < r; i++ {
+		res = append(res, AbMat.At(i, c-1))
 	}
 	return res
 }
