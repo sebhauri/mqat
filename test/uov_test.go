@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"testing"
 
 	constants "sebastienhauri.ch/mqt/const"
@@ -27,21 +28,33 @@ func TestUOVCorrectness(t *testing.T) {
 }
 
 func TestSolve(t *testing.T) {
-	A := crypto.Nrand128(constants.M*constants.M, []byte{88})
-	x := crypto.Nrand128(constants.M, []byte{1})
+	A := []uint8{
+		1, 2, 3, 7,
+		4, 57, 145, 9,
+		132, 35, 87, 101,
+		0, 189, 37, 12,
+	}
+	x := crypto.Nrand128(4, []byte{1})
 	t.Log("x =", x)
 
-	matA := math.NewDenseMatrix(constants.M, constants.M, A)
+	matA := math.NewDenseMatrix(4, 4, A)
 	vecX := math.NewVector(x)
 
 	b := math.MulMat(matA, vecX)
+	if b == nil {
+		return
+	}
 	t.Log("b =", b.Data)
 
-	xPrime := crypto.Solve(A, b.Data, constants.M)
+	xPrime := crypto.Solve(A, b.Data, 4)
 	if xPrime == nil {
 		t.Log("x' is nil")
 	}
-	t.Log(xPrime)
+	t.Log("x' =", xPrime)
+
+	if !bytes.Equal(x, xPrime) {
+		t.Error("results dont match.")
+	}
 }
 
 func mq(m, n int, msg []uint8, pk *crypto.UOVPublicKey) []uint8 {

@@ -1,7 +1,6 @@
 package test
 
 import (
-	"crypto/rand"
 	"testing"
 
 	"sebastienhauri.ch/mqt/math"
@@ -20,14 +19,12 @@ func TestMul(t *testing.T) {
 }
 
 func TestInverse(t *testing.T) {
-	a := make([]uint8, 1)
-	rand.Read(a)
-	a1 := math.Mul(a[0], 1)
-	t.Log(a1)
-	b := math.Inv(a[0])
-	t.Log(b)
-	one := math.Mul(a[0], b)
-	if one != 1 {
-		t.Error("Inverse is incorrect")
+	for i := 1; i < 256; i++ {
+		a := uint8(i)
+		b := math.Inv(a)
+		if math.Mul(a, b) != 1 {
+			t.Errorf("%d * %d != 1", a, b)
+			return
+		}
 	}
 }

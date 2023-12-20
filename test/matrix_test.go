@@ -110,17 +110,17 @@ func TestMatAdd(t *testing.T) {
 
 func TestMatMul(t *testing.T) {
 	inp := math.NewDenseMatrix(2, 3, []uint8{
-		1, 2, 3,
-		4, 5, 6,
+		127, 22, 30,
+		48, 54, 69,
 	})
 	sub := math.NewDenseMatrix(3, 2, []uint8{
-		2, 3,
-		4, 5,
-		6, 7,
+		29, 31,
+		111, 52,
+		240, 7,
 	})
 	exp := math.NewDenseMatrix(2, 2, []uint8{
-		0, 0,
-		8, 15,
+		97, 141,
+		149, 233,
 	})
 	out := math.MulMat(inp, sub)
 	if !matrixEqual(exp, out) {
