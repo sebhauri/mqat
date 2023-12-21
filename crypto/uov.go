@@ -97,7 +97,6 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 		if x.Data == nil {
 			continue
 		}
-		// vecX := math.NewVector(x)
 		O := sk.O
 		for i := 0; i < uov.M; i++ {
 			e := make([]uint8, uov.M)
@@ -120,45 +119,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 }
 
 func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
-	vec := math.NewVector(signature)
-
-	lenP1 := (uov.N - uov.M) * (uov.N - uov.M + 1) / 2
-	lenP2 := (uov.N - uov.M) * uov.M
-	lenP3 := uov.M * (uov.M + 1) / 2
-
-	res := make([]uint8, 0)
-	for k := 0; k < uov.M; k++ {
-		var acc uint8 = 0
-		P1 := math.NewUpperTriangle(
-			math.NewDenseMatrix(
-				uov.N-uov.M, uov.N-uov.M,
-				pk.P1i[k*lenP1:(k+1)*lenP1],
-			),
-		)
-		P2 := math.NewDenseMatrix(
-			uov.N-uov.M, uov.M, pk.P2i[k*lenP2:(k+1)*lenP2],
-		)
-		P3 := math.NewUpperTriangle(
-			math.NewDenseMatrix(
-				uov.M, uov.M, pk.P3i[k*lenP3:(k+1)*lenP3],
-			),
-		)
-		for i := 0; i < uov.N; i++ {
-			for j := i; j < uov.N; j++ {
-				t := math.Mul(vec.At(i, 0), vec.At(j, 0))
-				if j < uov.N-uov.M {
-					acc ^= math.Mul(t, P1.At(i, j))
-				} else {
-					if i < uov.N-uov.M {
-						acc ^= math.Mul(t, P2.At(i, j-uov.N+uov.M))
-					} else {
-						acc ^= math.Mul(t, P3.At(i-uov.N+uov.M, j-uov.N+uov.M))
-					}
-				}
-			}
-		}
-		res = append(res, acc)
-	}
+	res := math.MQUOV(pk.P1i, pk.P2i, pk.P3i, signature, uov.M)
 	return bytes.Equal(message, res)
 }
 

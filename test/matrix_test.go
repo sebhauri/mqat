@@ -1,8 +1,10 @@
 package test
 
 import (
+	"bytes"
 	"testing"
 
+	"sebastienhauri.ch/mqt/crypto"
 	"sebastienhauri.ch/mqt/math"
 )
 
@@ -125,5 +127,36 @@ func TestMatMul(t *testing.T) {
 	out := math.MulMat(inp, sub)
 	if !matrixEqual(exp, out) {
 		t.Error("matrix sub did not match expectation")
+	}
+}
+
+func TestSolve(t *testing.T) {
+	A := []uint8{
+		1, 2, 3, 7,
+		4, 57, 145, 9,
+		132, 35, 87, 101,
+		0, 189, 37, 12,
+	}
+	x := crypto.Nrand128(4, []byte{1})
+	t.Log("x =", x)
+
+	matA := math.NewDenseMatrix(4, 4, A)
+	vecX := math.NewVector(x)
+
+	b := math.MulMat(matA, vecX)
+	if b == nil {
+		return
+	}
+	t.Log("b =", b.Data)
+	vecB := math.NewVector(b.Data)
+
+	xPrime := math.Solve(matA, vecB)
+	if xPrime.Data == nil {
+		t.Log("x' is nil")
+	}
+	t.Log("x' =", xPrime)
+
+	if !bytes.Equal(x, xPrime.Data) {
+		t.Error("results dont match.")
 	}
 }
