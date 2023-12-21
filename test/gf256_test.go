@@ -17,3 +17,14 @@ func TestMul(t *testing.T) {
 	}
 	t.Logf("a=%d, b=%d", a, b)
 }
+
+func TestInverse(t *testing.T) {
+	for i := 1; i < 256; i++ {
+		a := uint8(i)
+		b := math.Inv(a)
+		if math.Mul(a, b) != 1 {
+			t.Errorf("%d * %d != 1", a, b)
+			return
+		}
+	}
+}

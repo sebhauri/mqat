@@ -1,16 +1,73 @@
 package crypto
 
-type PublicKey struct {
-	seed []byte
-	v    []uint8
+// //////////////////////////////////////
+// MQAT
+// //////////////////////////////////////
+type MQAT struct {
+	N, M                int
+	salt_len            int
+	random_sys_seed_len int
+	uov                 *UOV
+	mqdss               *MQDSS
 }
-type SecretKey struct {
-	sk   []byte
-	seed []byte
+
+type MQATSecretKey struct {
+	uov_sk          *UOVSecretKey
+	seed_random_sys []byte
 }
-type KeyPair struct {
-	P PublicKey
-	S SecretKey
+
+type MQATPublicKey struct {
+	uov_pk          *UOVPublicKey
+	seed_random_sys []byte
 }
-type Message []byte
-type Signature []byte
+
+type MQATToken struct {
+	Token          []byte
+	Salt           []byte
+	MQDSSSignature []byte
+}
+
+// //////////////////////////////////////
+// UOV
+// //////////////////////////////////////
+type UOV struct {
+	M, N      int
+	PkSeedLen int
+	SkSeedLen int
+}
+
+type UOVSecretKey struct {
+	Seed []byte
+	O    []uint8
+	Si   []uint8
+	Pk   *UOVPublicKey
+}
+
+type UOVPublicKey struct {
+	Seed []byte
+	P1i  []uint8
+	P2i  []uint8
+	P3i  []uint8
+}
+
+// //////////////////////////////////////
+// MQDSS
+// //////////////////////////////////////
+type MQDSS struct {
+	M, N      int
+	R         int
+	PkSeedLen int
+	SkSeedLen int
+}
+
+type MQDSSPublicKey struct {
+	P1 []uint8
+	P2 []uint8
+	P3 []uint8
+	R  []uint8
+	V  []uint8
+}
+type MQDSSSecretKey struct {
+	S  []uint8
+	Pk *MQDSSPublicKey
+}

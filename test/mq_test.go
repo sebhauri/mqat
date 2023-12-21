@@ -4,15 +4,16 @@ import (
 	"testing"
 
 	constants "sebastienhauri.ch/mqt/const"
+	"sebastienhauri.ch/mqt/crypto"
 	"sebastienhauri.ch/mqt/math"
 )
 
 func TestMQ(t *testing.T) {
 	x_seed := []byte{0}
 	F_seed := []byte{1}
-	x := math.Nrand(constants.N, x_seed)
-	F := math.Nrand(constants.FLEN, F_seed)
-	fx := math.MQ(F, x, constants.M)
+	x := crypto.Nrand256(constants.N, x_seed)
+	F := crypto.Nrand128(constants.FLEN, F_seed)
+	fx := math.MQR(F, x, constants.M)
 	t.Logf("fx=%v", fx)
 
 	x2 := make([]uint8, constants.N)
@@ -33,15 +34,14 @@ func TestMQ(t *testing.T) {
 			k++
 		}
 	}
-	xijxi := append(xij, x2[:]...)
-	if len(xijxi) != filen+constants.N {
+	if len(xij) != filen {
 		t.Errorf("xijxi does not have good length.")
 		return
 	}
 	for i := 0; i < constants.M; i++ {
 		var fxi uint8 = 0
-		for j := 0; j < filen+constants.N; j++ {
-			fxi ^= math.Mul(xijxi[j], F2[i*(filen+constants.N)+j])
+		for j := 0; j < filen; j++ {
+			fxi ^= math.Mul(xij[j], F2[i*(filen)+j])
 		}
 		fx2[i] = fxi
 	}
@@ -56,27 +56,35 @@ func TestMQ(t *testing.T) {
 }
 
 func TestG(t *testing.T) {
+	n := constants.N
+	m := constants.M
 	x_seed := []byte{0}
 	y_seed := []byte{2}
-	F_seed := []byte{1}
-	x := math.Nrand(constants.N, x_seed)
-	y := math.Nrand(constants.N, y_seed)
-	F := math.Nrand(constants.FLEN, F_seed)
-	fx := math.MQ(F, x, constants.M)
-	fy := math.MQ(F, y, constants.M)
-	xplusy := make([]uint8, constants.N)
-	for i := 0; i < constants.N; i++ {
+	R_seed := []byte{1}
+	P_seed := []byte{3}
+	x := crypto.Nrand256(n+m, x_seed)
+	y := crypto.Nrand256(n+m, y_seed)
+	R := crypto.Nrand128(math.Flen(m, m), R_seed)
+	P := crypto.Nrand128(math.Flen(m, n), P_seed)
+	P1 := P[:m*(n-m)*(n-m+1)/2]
+	P2 := P[m*(n-m)*(n-m+1)/2 : m*(n-m)*(n-m+1)/2+m*m*(n-m)]
+	P3 := P[m*(n-m)*(n-m+1)/2+m*m*(n-m):]
+
+	fx := math.MQ(P1, P2, P3, R, x, m, n)
+	fy := math.MQ(P1, P2, P3, R, y, m, n)
+	xplusy := make([]uint8, n+m)
+	for i := 0; i < n+m; i++ {
 		xplusy[i] = x[i] ^ y[i]
 	}
-	fxplusy := math.MQ(F, xplusy[:], constants.M)
-	gxy := math.G(F, x, y, constants.M)
+	fxplusy := math.MQ(P1, P2, P3, R, xplusy, m, n)
+	gxy := math.G(P1, P2, P3, R, x, y, m, n)
 
 	t.Logf("f(x)=%v", fx)
 	t.Logf("f(y)=%v", fy)
 	t.Logf("f(x+y)=%v", fxplusy)
 	t.Logf("gxy=%v", gxy)
 
-	for i := 0; i < constants.M; i++ {
+	for i := 0; i < m; i++ {
 		tmp := fxplusy[i] ^ fx[i] ^ fy[i]
 		if gxy[i] != tmp {
 			t.Errorf("%d) %d = %d - %d - %d != %d ", i, tmp, fxplusy[i], fx[i], fy[i], gxy[i])
