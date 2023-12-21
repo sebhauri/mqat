@@ -50,6 +50,21 @@ func (mqdss *MQDSS) KeyGen() (*MQDSSSecretKey, *MQDSSPublicKey) {
 	return sk, pk
 }
 
+func (mqdss *MQDSS) KeyPair(P1, P2, P3, R, S, V []uint8) (*MQDSSSecretKey, *MQDSSPublicKey) {
+	sk := new(MQDSSSecretKey)
+	pk := new(MQDSSPublicKey)
+
+	sk.S = S
+	pk.P1 = P1
+	pk.P2 = P2
+	pk.P3 = P3
+	pk.R = R
+	pk.V = V
+	sk.Pk = pk
+
+	return sk, pk
+}
+
 func (mqdss *MQDSS) Sign(message []uint8, sk *MQDSSSecretKey) []byte {
 	seedC := append(sk.Pk.P1, sk.Pk.P2...)
 	seedC = append(seedC, sk.Pk.P3...)

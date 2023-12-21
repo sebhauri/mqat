@@ -120,7 +120,23 @@ func (mqat *MQAT) User1(
 		}
 	}
 
-	return nil
+	mqdss_sk, _ := mqat.mqdss.KeyPair(P1i, P2i, P3i, R, x, w_prime)
+	sig := mqat.mqdss.Sign(w, mqdss_sk)
+
+	mqat_token := new(MQATToken)
+	mqat_token.token = t
+	mqat_token.salt = salt
+	mqat_token.mqdss_signature = sig
+
+	return mqat_token
+}
+
+func (mqat *MQAT) Verify(sk *MQATSecretKey, token *MQATToken) bool {
+	w_seed := append(token.token, token.salt...)
+	w := Nrand256(mqat.m, w_seed)
+	R := Nrand128(math.Flen(mqat.m, mqat.m), sk.seed_random_sys)
+	_, mqdss_pk := mqat.mqdss.KeyPair(sk.uov_sk.Pk.P1i, sk.uov_sk.Pk.P2i, sk.uov_sk.Pk.P3i, R, nil, w)
+	return mqat.mqdss.Verify(w, token.mqdss_signature, mqdss_pk)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
