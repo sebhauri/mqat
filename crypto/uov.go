@@ -80,6 +80,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 			}
 			L = append(L, res.Data...)
 		}
+		matL := math.NewDenseMatrix(uov.M, uov.M, L)
 		y := bytes.Clone(message)
 		for i := 0; i < uov.M; i++ {
 			P1i := math.NewUpperTriangle(
@@ -91,11 +92,12 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 			}
 			y[i] ^= res.Data[0]
 		}
-		x := Solve(L, y, uov.M)
-		if x == nil {
+		vecY := math.NewVector(y)
+		x := math.Solve(matL, vecY)
+		if x.Data == nil {
 			continue
 		}
-		vecX := math.NewVector(x)
+		// vecX := math.NewVector(x)
 		O := sk.O
 		for i := 0; i < uov.M; i++ {
 			e := make([]uint8, uov.M)
@@ -103,7 +105,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 			O = append(O, e...)
 		}
 		OBar := math.NewDenseMatrix(uov.N, uov.M, O)
-		res := math.MulMat(OBar, vecX)
+		res := math.MulMat(OBar, x)
 		if len(res.Data) != uov.N {
 			return nil
 		}
@@ -202,61 +204,6 @@ func derivePi3(O, Pi1, Pi2 []uint8, m, n int) []uint8 {
 				res = append(res, M_plus_MT.At(i, j))
 			}
 		}
-	}
-	return res
-}
-
-func isInvertible(L []uint8) bool {
-	return true
-}
-
-func Solve(A, b []uint8, m int) []uint8 {
-	Ab := make([]uint8, 0)
-	for i := 0; i < m; i++ {
-		for j := 0; j < m; j++ {
-			Ab = append(Ab, A[i*m+j])
-		}
-		Ab = append(Ab, b[i])
-	}
-	if len(Ab) != (m+1)*m {
-		return nil
-	}
-
-	AbMat := math.NewDenseMatrix(m, m+1, Ab)
-	for i := 0; i < m; i++ {
-		for j := i + 1; j < m; j++ {
-			if AbMat.At(i, i) == 0 {
-				for k := i; k < m+1; k++ {
-					AbMat.Set(i, k, AbMat.At(i, k)^AbMat.At(j, k))
-				}
-			}
-		}
-		if AbMat.At(i, i) == 0 {
-			return nil
-		}
-		pi := math.Inv(AbMat.At(i, i))
-		for k := i; k < m+1; k++ {
-			AbMat.Set(i, k, math.Mul(pi, AbMat.At(i, k)))
-		}
-		for j := i + 1; j < m; j++ {
-			aji := AbMat.At(j, i)
-			for k := i; k < m+1; k++ {
-				AbMat.Set(j, k, AbMat.At(j, k)^math.Mul(aji, AbMat.At(i, k)))
-			}
-		}
-	}
-
-	for i := m - 1; i > 0; i-- {
-		aim := AbMat.At(i, m)
-		for j := 0; j < i; j++ {
-			AbMat.Set(j, m, AbMat.At(j, m)^math.Mul(AbMat.At(j, i), aim))
-		}
-	}
-
-	res := make([]uint8, 0)
-	r, c := AbMat.Dims()
-	for i := 0; i < r; i++ {
-		res = append(res, AbMat.At(i, c-1))
 	}
 	return res
 }

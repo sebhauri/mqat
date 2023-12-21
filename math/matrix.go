@@ -173,3 +173,60 @@ func ScaleMat(M Matrix, v uint8) *Dense {
 	}
 	return res
 }
+
+func Solve(A Matrix, b Vector) Vector {
+	r, c := A.Dims()
+	l, _ := b.Dims()
+	if r != c || r != l {
+		return Vector{}
+	}
+
+	Ab := make([]uint8, 0)
+	for i := 0; i < l; i++ {
+		for j := 0; j < l; j++ {
+			Ab = append(Ab, A.At(i, j))
+		}
+		Ab = append(Ab, b.At(i, 0))
+	}
+	if len(Ab) != (l+1)*l {
+		return Vector{}
+	}
+
+	AbMat := NewDenseMatrix(l, l+1, Ab)
+	for i := 0; i < l; i++ {
+		for j := i + 1; j < l; j++ {
+			if AbMat.At(i, i) == 0 {
+				for k := i; k < l+1; k++ {
+					AbMat.Set(i, k, AbMat.At(i, k)^AbMat.At(j, k))
+				}
+			}
+		}
+		if AbMat.At(i, i) == 0 {
+			return Vector{}
+		}
+		pi := Inv(AbMat.At(i, i))
+		for k := i; k < l+1; k++ {
+			AbMat.Set(i, k, Mul(pi, AbMat.At(i, k)))
+		}
+		for j := i + 1; j < l; j++ {
+			aji := AbMat.At(j, i)
+			for k := i; k < l+1; k++ {
+				AbMat.Set(j, k, AbMat.At(j, k)^Mul(aji, AbMat.At(i, k)))
+			}
+		}
+	}
+
+	for i := l - 1; i > 0; i-- {
+		aim := AbMat.At(i, l)
+		for j := 0; j < i; j++ {
+			AbMat.Set(j, l, AbMat.At(j, l)^Mul(AbMat.At(j, i), aim))
+		}
+	}
+
+	res := make([]uint8, 0)
+	r, c = AbMat.Dims()
+	for i := 0; i < r; i++ {
+		res = append(res, AbMat.At(i, c-1))
+	}
+	return NewVector(res)
+}

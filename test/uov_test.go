@@ -113,14 +113,15 @@ func TestSolve(t *testing.T) {
 		return
 	}
 	t.Log("b =", b.Data)
+	vecB := math.NewVector(b.Data)
 
-	xPrime := crypto.Solve(A, b.Data, 4)
-	if xPrime == nil {
+	xPrime := math.Solve(matA, vecB)
+	if xPrime.Data == nil {
 		t.Log("x' is nil")
 	}
 	t.Log("x' =", xPrime)
 
-	if !bytes.Equal(x, xPrime) {
+	if !bytes.Equal(x, xPrime.Data) {
 		t.Error("results dont match.")
 	}
 }
