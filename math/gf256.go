@@ -1,13 +1,15 @@
 package math
 
-func IsNonZero(a uint8) bool {
-	a8 := a
+type Gf256 uint8
+
+func IsNonZero(a Gf256) bool {
+	a8 := uint(a)
 	r := 0 - a8
 	r >>= 8
 	return (r & 1) == 1
 }
 
-func Mul(a, b uint8) uint8 {
+func Mul(a, b Gf256) Gf256 {
 	r := a * (b & 1)
 
 	a = (a << 1) ^ ((a >> 7) * 0x1b)
@@ -27,7 +29,7 @@ func Mul(a, b uint8) uint8 {
 	return r
 }
 
-func Square(a uint8) uint8 {
+func Square(a Gf256) Gf256 {
 	r8 := a & 1
 	r8 ^= (a << 1) & 4
 	r8 ^= (a << 2) & (1 << 4)
@@ -41,7 +43,7 @@ func Square(a uint8) uint8 {
 	return r8
 }
 
-func Inv(a uint8) uint8 {
+func Inv(a Gf256) Gf256 {
 	a2 := Square(a)
 	a4 := Square(a2)
 	a8 := Square(a4)
