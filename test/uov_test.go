@@ -75,7 +75,7 @@ func TestUOVCorrectness(t *testing.T) {
 
 	x := crypto.Nrand128(constants.N, []byte{0})
 	t.Log(len(x), "x =", x)
-	Px := math.MQUOV(pk.P1i, pk.P2i, pk.P3i, x, m)
+	Px := math.MQP(pk.P1i, pk.P2i, pk.P3i, x, m)
 	t.Log(len(Px), "P(x) =", Px)
 
 	if !uov.Verify(Px, x, pk) {
@@ -90,6 +90,6 @@ func TestUOVCorrectness(t *testing.T) {
 		t.Error("Signature does not verify")
 		return
 	}
-	res2 := math.MQUOV(pk.P1i, pk.P2i, pk.P3i, sig, m)
+	res2 := math.MQP(pk.P1i, pk.P2i, pk.P3i, sig, m)
 	t.Log(len(res2), "P(x') =", res2)
 }

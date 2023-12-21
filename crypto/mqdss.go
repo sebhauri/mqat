@@ -9,7 +9,7 @@ import (
 	"sebastienhauri.ch/mqt/math"
 )
 
-func NewMQDSS(m, n, r int) *MQDSS {
+func NewMQDSS(m, n, r, pk_seed_len, sk_seed_len int) *MQDSS {
 	if m <= 0 || n <= 0 || r <= 0 || m > n {
 		return nil
 	}
@@ -17,48 +17,52 @@ func NewMQDSS(m, n, r int) *MQDSS {
 	mqdss.M = m
 	mqdss.N = n
 	mqdss.R = r
-	mqdss.flen = math.Flen(m, n)
+	mqdss.PkSeedLen = pk_seed_len
+	mqdss.SkSeedLen = sk_seed_len
 	return mqdss
 }
 
 // TODO: handling errors better
-func (mqdss *MQDSS) KeyPair() (*MQDSSSecretKey, *MQDSSPublicKey) {
+func (mqdss *MQDSS) KeyGen() (*MQDSSSecretKey, *MQDSSPublicKey) {
+	m := mqdss.M
+	n := mqdss.N - mqdss.M
+
 	sk := new(MQDSSSecretKey)
 	pk := new(MQDSSPublicKey)
-	sk_sf := make([]byte, 2*constants.MQDSS_SEED_BYTES)
-	_, err := rand.Read(sk_sf)
+	seed_S_P_R := make([]byte, 2*mqdss.PkSeedLen/8+mqdss.SkSeedLen/8)
+	_, err := rand.Read(seed_S_P_R)
 	if err != nil {
 		return nil, nil
 	}
-	sk.sk = sk_sf[len(sk_sf)/2:]
-	sk.seed = sk_sf[:len(sk_sf)/2]
-	pk.Seed = sk_sf[:len(sk_sf)/2]
-	F := Nrand128(mqdss.flen, pk.Seed)
-	if F == nil {
-		return nil, nil
-	}
-	sk_gf256 := Nrand256(mqdss.N, sk.sk)
-	if sk_gf256 == nil {
-		return nil, nil
-	}
-	pk_gf256 := math.MQ(F, sk_gf256, mqdss.M)
-	if pk_gf256 == nil {
-		return nil, nil
-	}
-	pk.V = pk_gf256
+
+	pk.R = Nrand128(math.Flen(m, m), seed_S_P_R[:mqdss.PkSeedLen/8])
+	P := Nrand128(math.Flen(m, n), seed_S_P_R[mqdss.PkSeedLen/8:2*mqdss.PkSeedLen/8])
+	P1len := m * (n - m) * (n - m + 1) / 2
+	P2len := m * m * (n - m)
+	pk.P1 = P[:P1len]
+	pk.P2 = P[P1len : P1len+P2len]
+	pk.P3 = P[P1len+P2len:]
+
+	sk.S = Nrand256(mqdss.N, seed_S_P_R[2*mqdss.PkSeedLen/8:])
+	pk.V = math.MQ(pk.P1, pk.P2, pk.P3, pk.R, sk.S, m, n)
+	sk.Pk = pk
+
 	return sk, pk
 }
 
-func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
-	F := Nrand128(mqdss.flen, sk.seed)
-	if F == nil {
+func (mqdss *MQDSS) Sign(message []uint8, sk *MQDSSSecretKey) []byte {
+	seedC := append(sk.Pk.P1, sk.Pk.P2...)
+	seedC = append(seedC, sk.Pk.P3...)
+	seedC = append(seedC, sk.Pk.R...)
+	seedC = append(seedC, message...)
+	C := H(seedC)
+	seedD := append(C[:], message...)
+	D := H(seedD)
+	seed := make([]byte, mqdss.SkSeedLen)
+	_, err := rand.Read(seed)
+	if err != nil {
 		return nil
 	}
-	tohash := append(sk.sk, message...)
-	C := H(tohash)
-	tohash = append(C[:], message...)
-	D := H(tohash)
-	seed := append(sk.sk, D[:]...)
 	r0t0e0 := Nrand256((2*mqdss.N+mqdss.M)*mqdss.R, seed)
 	r0 := r0t0e0[:mqdss.R*mqdss.N]
 	r1 := make([]uint8, len(r0))
@@ -68,15 +72,19 @@ func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
 	e1 := make([]uint8, len(e0))
 	G := make([]uint8, 0)
 
-	sk_gf256 := Nrand256(mqdss.N, sk.sk)
+	sk_gf256 := sk.S
 	for i := 0; i < mqdss.R; i++ {
 		for j := 0; j < mqdss.N; j++ {
 			r1ij := sk_gf256[j] ^ r0[j+i*int(mqdss.N)]
 			r1[j+i*int(mqdss.N)] = r1ij
 		}
-		G = append(G, math.G(F, t0[i*int(mqdss.N):(i+1)*int(mqdss.N)], r1[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)...)
+		G = append(G,
+			math.G(sk.Pk.P1, sk.Pk.P2, sk.Pk.P3, sk.Pk.R,
+				t0[i*int(mqdss.N):(i+1)*int(mqdss.N)],
+				r1[i*int(mqdss.N):(i+1)*int(mqdss.N)],
+				mqdss.M, mqdss.N-mqdss.M)...)
 	}
-	for i := 0; i < mqdss.R*int(mqdss.M); i++ {
+	for i := 0; i < mqdss.R*mqdss.M; i++ {
 		gi := G[i] ^ e0[i]
 		G[i] = gi
 	}
@@ -95,7 +103,9 @@ func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
 			t1ij := math.Mul(alphas[i], r0[i*mqdss.N+j]) ^ t0[i*mqdss.N+j]
 			t1[i*mqdss.N+j] = t1ij
 		}
-		Fr0 := math.MQ(F, r0[i*int(mqdss.N):(i+1)*int(mqdss.N)], mqdss.M)
+		Fr0 := math.MQ(sk.Pk.P1, sk.Pk.P2, sk.Pk.P3, sk.Pk.R,
+			r0[i*int(mqdss.N):(i+1)*int(mqdss.N)],
+			mqdss.M, mqdss.N-mqdss.M)
 		for j := 0; j < mqdss.M; j++ {
 			e1ij := math.Mul(alphas[i], Fr0[j]) ^ e0[i*mqdss.M+j]
 			e1[i*mqdss.M+j] = e1ij
@@ -103,7 +113,7 @@ func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
 	}
 	sigma1 := append(t1, e1...)
 	h1 := sha3.NewShake128()
-	tohash = append(h0, sigma1...)
+	tohash := append(h0, sigma1...)
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
 	sigma2 := make([]byte, 0)
@@ -130,8 +140,7 @@ func (mqdss *MQDSS) Sign(message Message, sk *MQDSSSecretKey) Signature {
 	return sig
 }
 
-func (mqdss *MQDSS) Verify(message Message, sig Signature, pk *MQDSSPublicKey) bool {
-	F := Nrand128(mqdss.flen, pk.Seed)
+func (mqdss *MQDSS) Verify(message []uint8, sig []byte, pk *MQDSSPublicKey) bool {
 	C := bytes.Clone(sig[:constants.HASH_BYTES])
 	tohash := append(C, message...)
 	D := H(tohash)
@@ -167,7 +176,7 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk *MQDSSPublicKey) b
 					xj := math.Mul(alphas[i], uint8(r_ch[j])) ^ uint8(t1[j])
 					x[j] = xj
 				}
-				y := math.MQ(F, r_ch, mqdss.M)
+				y := math.MQ(pk.P1, pk.P2, pk.P3, pk.R, r_ch, mqdss.M, mqdss.N-mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
 					yj := math.Mul(alphas[i], y[j]) ^ uint8(e1[j])
 					y[j] = yj
@@ -176,8 +185,8 @@ func (mqdss *MQDSS) Verify(message Message, sig Signature, pk *MQDSSPublicKey) b
 				c = append(c, c0...)
 				c = append(c, c_ch...)
 			} else {
-				y := math.MQ(F, r_ch, mqdss.M)
-				z := math.G(F, r_ch, t1, mqdss.M)
+				y := math.MQ(pk.P1, pk.P2, pk.P3, pk.R, r_ch, mqdss.M, mqdss.N-mqdss.M)
+				z := math.G(pk.P1, pk.P2, pk.P3, pk.R, r_ch, t1, mqdss.M, mqdss.N-mqdss.M)
 				for j := 0; j < int(mqdss.M); j++ {
 					yj := math.Mul(alphas[i], pk.V[j]^y[j]) ^ z[j] ^ uint8(e1[j])
 					y[j] = yj

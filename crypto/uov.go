@@ -119,7 +119,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 }
 
 func (uov *UOV) Verify(message, signature []uint8, pk *UOVPublicKey) bool {
-	res := math.MQUOV(pk.P1i, pk.P2i, pk.P3i, signature, uov.M)
+	res := math.MQP(pk.P1i, pk.P2i, pk.P3i, signature, uov.M)
 	return bytes.Equal(message, res)
 }
 

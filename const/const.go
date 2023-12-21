@@ -2,7 +2,7 @@ package constants
 
 // General
 const LAMBDA = 128
-const MEASURE_ROUNDS = 100
+const MEASURE_ROUNDS = 3
 const Q = 256
 const M = 44
 const N = 112
@@ -15,6 +15,7 @@ const UOV_PK_SEED_LEN = 128
 const UOV_SK_SEED_LEN = 256
 
 // MQDSS
-const MQDSS_SEED_BYTES = 32
+const MQDSS_PK_SEED_LEN = 128
+const MQDSS_SK_SEED_LEN = 256
 const MQDSS_ROUNDS = 150
 const FLEN = M * (N * (N + 1) / 2)

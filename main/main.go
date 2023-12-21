@@ -58,14 +58,14 @@ func main() {
 	println()
 
 	println("===== MQDSS =====")
-	mqdss := crypto.NewMQDSS(uov.M, uov.N+uov.M, constants.MQDSS_ROUNDS)
+	mqdss := crypto.NewMQDSS(uov.M, uov.N+uov.M, constants.MQDSS_ROUNDS, constants.MQDSS_PK_SEED_LEN, constants.MQDSS_SK_SEED_LEN)
 	fmt.Printf("Initialising an MQDSS with m=%d, n=%d, r=%d ..\n", mqdss.M, mqdss.N, mqdss.R)
 	var mqdss_sk *crypto.MQDSSSecretKey
 	var mqdss_pk *crypto.MQDSSPublicKey
 	println("Benchmarking key generation..")
 	start = time.Now()
 	for i := 0; i < constants.MEASURE_ROUNDS; i++ {
-		mqdss_sk, mqdss_pk = mqdss.KeyPair()
+		mqdss_sk, mqdss_pk = mqdss.KeyGen()
 		if mqdss_sk == nil || mqdss_pk == nil {
 			println("\t New key pair is nil at iteration", i)
 		}

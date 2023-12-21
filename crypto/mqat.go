@@ -15,6 +15,8 @@ func NewMQAT(
 	uov_sk_seed_len int,
 	random_sys_seed_len int,
 	mqdss_rounds int,
+	mqdss_sk_seed_len int,
+	mqdss_pk_seed_len int,
 ) *MQAT {
 	if m <= 0 || n <= 0 || m > n || salt_len <= 0 ||
 		uov_pk_seed_len <= 0 || uov_sk_seed_len <= 0 ||
@@ -27,7 +29,7 @@ func NewMQAT(
 	mqat.salt_len = salt_len
 	mqat.random_sys_seed_len = random_sys_seed_len
 	mqat.uov = NewUOV(m, n, uov_pk_seed_len, uov_sk_seed_len)
-	mqat.mqdss = NewMQDSS(m, m+n, mqdss_rounds)
+	mqat.mqdss = NewMQDSS(m, m+n, mqdss_rounds, mqdss_pk_seed_len, mqdss_sk_seed_len)
 	return mqat
 }
 
@@ -78,7 +80,7 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) ([]byte, []byte, []uint8, []uint8) {
 		logrus.Error("Could not sample z*")
 	}
 	R := Nrand128(math.Flen(mqat.m, mqat.m), pk.seed_random_sys)
-	w_star := math.MQ(R, z_star, mqat.m)
+	w_star := math.MQR(R, z_star, mqat.m)
 
 	w_tilde := make([]uint8, mqat.m)
 	for i := 0; i < len(w_tilde); i++ {
@@ -93,11 +95,31 @@ func (mqat *MQAT) Sign0(sk *MQATSecretKey, query []byte) []uint8 {
 }
 
 func (mqat *MQAT) User1(
+	pk *MQATPublicKey,
 	t []byte,
 	salt []byte,
 	z_star []uint8,
 	resp []uint8,
 ) *MQATToken {
+	w_seed := append(t, salt...)
+	w := Nrand256(mqat.m, w_seed)
+
+	P1i := pk.uov_pk.P1i
+	P2i := pk.uov_pk.P2i
+	P3i := pk.uov_pk.P3i
+	R := Nrand128(math.Flen(mqat.m, mqat.m), pk.seed_random_sys)
+	x := append(resp, z_star...)
+	if len(x) != mqat.n+mqat.n {
+		return nil
+	}
+
+	w_prime := math.MQ(P1i, P2i, P3i, R, x, mqat.m, mqat.n)
+	for i := 0; i < mqat.m; i++ {
+		if w[i] != w_prime[i] {
+			return nil
+		}
+	}
+
 	return nil
 }
 

@@ -54,19 +54,20 @@ type UOVPublicKey struct {
 // MQDSS
 // //////////////////////////////////////
 type MQDSS struct {
-	N, M int
-	R    int
-	flen int
+	M, N      int
+	R         int
+	PkSeedLen int
+	SkSeedLen int
 }
 
 type MQDSSPublicKey struct {
-	Seed []byte
-	V    []uint8
+	P1 []uint8
+	P2 []uint8
+	P3 []uint8
+	R  []uint8
+	V  []uint8
 }
 type MQDSSSecretKey struct {
-	sk   []byte
-	seed []byte
+	S  []uint8
+	Pk *MQDSSPublicKey
 }
-
-type Message []byte
-type Signature []byte

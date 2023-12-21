@@ -1,16 +1,30 @@
 package math
 
-func MQ(F []uint8, x []uint8, m int) []uint8 {
+func MQ(P1i, P2i, P3i, R, x []uint8, m, n int) []uint8 {
+	x1 := x[:n]
+	x2 := x[n:]
+
+	Px1 := MQP(P1i, P2i, P3i, x1, m)
+	Rx2 := MQR(R, x2, m)
+
+	res := make([]uint8, m)
+	for i := 0; i < m; i++ {
+		res[i] = Px1[i] ^ Rx2[i]
+	}
+	return res
+}
+
+func MQR(R []uint8, x []uint8, m int) []uint8 {
 	fx := make([]uint8, m)
 	n := len(x)
 	xij := quad(x)
 	for i := 0; i < m; i++ {
-		fx[i] = mqi(F[Flen(i, n):Flen(i+1, n)], xij)
+		fx[i] = mqi(R[Flen(i, n):Flen(i+1, n)], xij)
 	}
 	return fx
 }
 
-func MQUOV(P1i, P2i, P3i, x []uint8, m int) []uint8 {
+func MQP(P1i, P2i, P3i, x []uint8, m int) []uint8 {
 	fx := make([]uint8, 0)
 	n := len(x)
 
@@ -55,19 +69,18 @@ func MQUOV(P1i, P2i, P3i, x []uint8, m int) []uint8 {
 	return fx
 }
 
-func G(F []uint8, x []uint8, y []uint8, m int) []uint8 {
-	var n int
-	if n = len(x); n != len(y) {
+func G(P1i, P2i, P3i, R, x, y []uint8, m, n int) []uint8 {
+	if len(x) != len(y) {
 		return nil
 	}
 	gx := make([]uint8, m)
-	fx := MQ(F, x, m)
-	fy := MQ(F, y, m)
-	xy := make([]uint8, n)
-	for i := 0; i < n; i++ {
+	fx := MQ(P1i, P2i, P3i, R, x, m, n)
+	fy := MQ(P1i, P2i, P3i, R, y, m, n)
+	xy := make([]uint8, m+n)
+	for i := 0; i < m+n; i++ {
 		xy[i] = x[i] ^ y[i]
 	}
-	fxy := MQ(F, xy, m)
+	fxy := MQ(P1i, P2i, P3i, R, xy, m, n)
 	for i := 0; i < m; i++ {
 		gxi := fxy[i] ^ fx[i] ^ fy[i]
 		gx[i] = gxi
