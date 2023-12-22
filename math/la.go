@@ -47,9 +47,9 @@ type DenseV struct {
 	data []Gf256
 }
 
-func NewDenseVector(data []Gf256) *DenseV {
+func NewDenseVector(len int, data []Gf256) *DenseV {
 	if data == nil {
-		data = make([]Gf256, 0)
+		data = make([]Gf256, len)
 	}
 	return &DenseV{data: data}
 }
@@ -167,7 +167,7 @@ func MulVec(A Matrix, b Vector) *DenseV {
 	}
 	_, ok := A.(UpperTriangle)
 
-	res := NewDenseVector(nil)
+	res := NewDenseVector(r, nil)
 	for i := 0; i < r; i++ {
 		var tmp Gf256 = 0
 		j := 0
@@ -199,6 +199,21 @@ func AddMat(A, B Matrix) *DenseM {
 	return res
 }
 
+func AddVec(a, b Vector) *DenseV {
+	la := a.Len()
+	lb := b.Len()
+	if la != lb {
+		return nil
+	}
+
+	res := NewDenseVector(la, nil)
+	for i := 0; i < la; i++ {
+		res.SetVec(i, a.AtVec(i)^b.AtVec(i))
+	}
+
+	return res
+}
+
 func ScaleMat(M Matrix, v Gf256) *DenseM {
 	rows, cols := M.Dims()
 	res := NewDenseMatrix(rows, cols, nil)
@@ -211,59 +226,119 @@ func ScaleMat(M Matrix, v Gf256) *DenseM {
 	return res
 }
 
+func ScaleVec(v Vector, f Gf256) *DenseV {
+	l := v.Len()
+	res := NewDenseVector(l, nil)
+	for i := 0; i < l; i++ {
+		res.SetVec(i, Mul(res.AtVec(i), f))
+	}
+	return res
+}
+
+func AppendCol(M Matrix, v Vector) *DenseM {
+	r, c := M.Dims()
+	l := v.Len()
+	if r != c {
+		return nil
+	}
+
+	res := NewDenseMatrix(r, c+1, nil)
+	for i := 0; i < l; i++ {
+		for j := 0; j < c; j++ {
+			res.Set(i, j, M.At(i, j))
+		}
+		res.Set(i, c, v.AtVec(i))
+	}
+	return res
+}
+
+func GetCol(i int, M Matrix) *DenseV {
+	r, c := M.Dims()
+	if i >= c {
+		return nil
+	}
+
+	res := NewDenseVector(r, nil)
+	for j := 0; j < r; j++ {
+		res.SetVec(j, M.At(j, i))
+	}
+	return res
+}
+
 func Solve(A Matrix, b Vector) *DenseV {
 	r, c := A.Dims()
-	l, _ := b.Dims()
-	if r != c || r != l {
+	l := b.Len()
+	if r != c {
 		return nil
 	}
 
-	Ab := make([]Gf256, 0)
-	for i := 0; i < l; i++ {
-		for j := 0; j < l; j++ {
-			Ab = append(Ab, A.At(i, j))
-		}
-		Ab = append(Ab, b.AtVec(i))
-	}
-	if len(Ab) != (l+1)*l {
+	Ab := AppendCol(A, b)
+	if Ab == nil {
 		return nil
 	}
 
-	AbMat := NewDenseMatrix(l, l+1, Ab)
 	for i := 0; i < l; i++ {
 		for j := i + 1; j < l; j++ {
-			if AbMat.At(i, i) == 0 {
+			if Ab.At(i, i) == 0 {
 				for k := i; k < l+1; k++ {
-					AbMat.Set(i, k, AbMat.At(i, k)^AbMat.At(j, k))
+					Ab.Set(i, k, Ab.At(i, k)^Ab.At(j, k))
 				}
 			}
 		}
-		if AbMat.At(i, i) == 0 {
+		if Ab.At(i, i) == 0 {
 			return nil
 		}
-		pi := Inv(AbMat.At(i, i))
+		pi := Inv(Ab.At(i, i))
 		for k := i; k < l+1; k++ {
-			AbMat.Set(i, k, Mul(pi, AbMat.At(i, k)))
+			Ab.Set(i, k, Mul(pi, Ab.At(i, k)))
 		}
 		for j := i + 1; j < l; j++ {
-			aji := AbMat.At(j, i)
+			aji := Ab.At(j, i)
 			for k := i; k < l+1; k++ {
-				AbMat.Set(j, k, AbMat.At(j, k)^Mul(aji, AbMat.At(i, k)))
+				Ab.Set(j, k, Ab.At(j, k)^Mul(aji, Ab.At(i, k)))
 			}
 		}
 	}
 
 	for i := l - 1; i > 0; i-- {
-		aim := AbMat.At(i, l)
+		aim := Ab.At(i, l)
 		for j := 0; j < i; j++ {
-			AbMat.Set(j, l, AbMat.At(j, l)^Mul(AbMat.At(j, i), aim))
+			Ab.Set(j, l, Ab.At(j, l)^Mul(Ab.At(j, i), aim))
 		}
 	}
 
-	res := make([]Gf256, 0)
-	r, c = AbMat.Dims()
-	for i := 0; i < r; i++ {
-		res = append(res, AbMat.At(i, c-1))
+	res := GetCol(c, Ab)
+	return res
+}
+
+func Dot(v1, v2 Vector) Gf256 {
+	lv1 := v1.Len()
+	lv2 := v2.Len()
+	if lv1 != lv2 {
+		panic("wrong vector sizes for dot product")
 	}
-	return NewDenseVector(res)
+
+	var acc Gf256 = 0
+	for i := 0; i < lv1; i++ {
+		acc ^= Mul(v1.AtVec(i), v2.AtVec(i))
+	}
+	return acc
+}
+
+// Computes v_tr * A * v
+func ADot(A Matrix, v Vector) Gf256 {
+	r, c := A.Dims()
+	l := v.Len()
+	if r != c || c != l {
+		panic("wrong sizes for ADot product")
+	}
+
+	var acc Gf256 = 0
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			t := Mul(v.AtVec(i), v.AtVec(j))
+			Aij := A.At(i, j) ^ A.At(j, i)
+			acc ^= Mul(t, Aij)
+		}
+	}
 }
