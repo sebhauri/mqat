@@ -1,39 +1,84 @@
 package math
 
 type Matrix interface {
-	At(i, j int) uint8
-	Dims() (rows, cols int)
-	Set(i, j int, v uint8)
+	At(i, j int) Gf256
+	Dims() (int, int)
+	Set(i, j int, v Gf256)
+}
+
+type Vector interface {
+	Matrix
+	AtVec(i int) Gf256
+	Len() int
+	SetVec(i int, v Gf256)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-type Dense struct {
-	Data       []uint8
+type DenseM struct {
+	data       []Gf256
 	rows, cols int
 }
 
-func NewDenseMatrix(rows, cols int, data []uint8) *Dense {
+func NewDenseMatrix(rows, cols int, data []Gf256) *DenseM {
 	if data == nil {
-		data = make([]uint8, rows*cols)
+		data = make([]Gf256, rows*cols)
 	}
-	return &Dense{
-		Data: data,
+	return &DenseM{
+		data: data,
 		rows: rows,
 		cols: cols,
 	}
 }
 
-func (d *Dense) At(i, j int) uint8 {
-	return d.Data[i*d.cols+j]
+func (d *DenseM) At(i, j int) Gf256 {
+	return d.data[i*d.cols+j]
 }
 
-func (d *Dense) Dims() (int, int) {
+func (d *DenseM) Dims() (int, int) {
 	return d.rows, d.cols
 }
 
-func (d *Dense) Set(i, j int, v uint8) {
-	d.Data[i*d.cols+j] = v
+func (d *DenseM) Set(i, j int, v Gf256) {
+	d.data[i*d.cols+j] = v
+}
+
+type DenseV struct {
+	data []Gf256
+}
+
+func NewDenseVector(data []Gf256) *DenseV {
+	if data == nil {
+		data = make([]Gf256, 0)
+	}
+	return &DenseV{data: data}
+}
+
+func (v *DenseV) At(i, j int) Gf256 {
+	return v.AtVec(i)
+}
+
+func (v *DenseV) AtVec(i int) Gf256 {
+	return v.data[i]
+}
+
+func (v *DenseV) Dims() (int, int) {
+	return v.Len(), 1
+}
+
+func (v *DenseV) Len() int {
+	return len(v.data)
+}
+
+func (v *DenseV) Set(i, j int, val Gf256) {
+	if j != 0 {
+		panic("")
+	}
+	v.SetVec(i, val)
+}
+
+func (v *DenseV) SetVec(i int, val Gf256) {
+	v.data[i] = val
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,7 +94,7 @@ func T(M Matrix) Matrix {
 	return Transpose{m: M}
 }
 
-func (t Transpose) At(i, j int) uint8 {
+func (t Transpose) At(i, j int) Gf256 {
 	return t.m.At(j, i)
 }
 
@@ -58,7 +103,7 @@ func (t Transpose) Dims() (int, int) {
 	return c, r
 }
 
-func (t Transpose) Set(i, j int, v uint8) {
+func (t Transpose) Set(i, j int, v Gf256) {
 	t.m.Set(j, i, v)
 }
 
@@ -72,7 +117,7 @@ func NewUpperTriangle(M Matrix) UpperTriangle {
 	return UpperTriangle{m: M}
 }
 
-func (u UpperTriangle) At(i, j int) uint8 {
+func (u UpperTriangle) At(i, j int) Gf256 {
 	if j < i {
 		return 0
 	}
@@ -83,7 +128,7 @@ func (u UpperTriangle) Dims() (int, int) {
 	return u.m.Dims()
 }
 
-func (u UpperTriangle) Set(i, j int, v uint8) {
+func (u UpperTriangle) Set(i, j int, v Gf256) {
 	if i < j {
 		return
 	}
@@ -91,40 +136,9 @@ func (u UpperTriangle) Set(i, j int, v uint8) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-type Vector struct {
-	Matrix
-	Data []uint8
-}
-
-func NewVector(data []uint8) Vector {
-	if data == nil {
-		data = make([]uint8, 0)
-	}
-	return Vector{Data: data}
-}
-
-func (v Vector) At(i, j int) uint8 {
-	if j != 0 {
-		panic("")
-	}
-	return v.Data[i]
-}
-
-func (v Vector) Dims() (int, int) {
-	return len(v.Data), 1
-}
-
-func (v Vector) Set(i, j int, val uint8) {
-	if j != 0 {
-		panic("")
-	}
-	v.Data[i] = val
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
-func MulMat(A, B Matrix) *Dense {
+func MulMat(A, B Matrix) *DenseM {
 	rowsA, colsA := A.Dims()
 	rowsB, colsB := B.Dims()
 	if colsA != rowsB {
@@ -134,7 +148,7 @@ func MulMat(A, B Matrix) *Dense {
 	res := NewDenseMatrix(rowsA, colsB, nil)
 	for i := 0; i < rowsA; i++ {
 		for j := 0; j < colsB; j++ {
-			var tmp uint8 = 0
+			var tmp Gf256 = 0
 			for k := 0; k < colsA; k++ {
 				tmp ^= Mul(A.At(i, k), B.At(k, j))
 			}
@@ -145,7 +159,30 @@ func MulMat(A, B Matrix) *Dense {
 	return res
 }
 
-func AddMat(A, B Matrix) *Dense {
+func MulVec(A Matrix, b Vector) *DenseV {
+	r, c := A.Dims()
+	l := b.Len()
+	if c != l {
+		return nil
+	}
+	_, ok := A.(UpperTriangle)
+
+	res := NewDenseVector(nil)
+	for i := 0; i < r; i++ {
+		var tmp Gf256 = 0
+		j := 0
+		if ok {
+			j = i
+		}
+		for ; j < l; j++ {
+			tmp ^= Mul(A.At(i, j), b.AtVec(j))
+		}
+		res.SetVec(i, tmp)
+	}
+	return res
+}
+
+func AddMat(A, B Matrix) *DenseM {
 	rowsA, colsA := A.Dims()
 	rowsB, colsB := B.Dims()
 	if rowsA != rowsB || colsA != colsB {
@@ -162,7 +199,7 @@ func AddMat(A, B Matrix) *Dense {
 	return res
 }
 
-func ScaleMat(M Matrix, v uint8) *Dense {
+func ScaleMat(M Matrix, v Gf256) *DenseM {
 	rows, cols := M.Dims()
 	res := NewDenseMatrix(rows, cols, nil)
 	for i := 0; i < rows; i++ {
@@ -174,22 +211,22 @@ func ScaleMat(M Matrix, v uint8) *Dense {
 	return res
 }
 
-func Solve(A Matrix, b Vector) Vector {
+func Solve(A Matrix, b Vector) *DenseV {
 	r, c := A.Dims()
 	l, _ := b.Dims()
 	if r != c || r != l {
-		return Vector{}
+		return nil
 	}
 
-	Ab := make([]uint8, 0)
+	Ab := make([]Gf256, 0)
 	for i := 0; i < l; i++ {
 		for j := 0; j < l; j++ {
 			Ab = append(Ab, A.At(i, j))
 		}
-		Ab = append(Ab, b.At(i, 0))
+		Ab = append(Ab, b.AtVec(i))
 	}
 	if len(Ab) != (l+1)*l {
-		return Vector{}
+		return nil
 	}
 
 	AbMat := NewDenseMatrix(l, l+1, Ab)
@@ -202,7 +239,7 @@ func Solve(A Matrix, b Vector) Vector {
 			}
 		}
 		if AbMat.At(i, i) == 0 {
-			return Vector{}
+			return nil
 		}
 		pi := Inv(AbMat.At(i, i))
 		for k := i; k < l+1; k++ {
@@ -223,10 +260,10 @@ func Solve(A Matrix, b Vector) Vector {
 		}
 	}
 
-	res := make([]uint8, 0)
+	res := make([]Gf256, 0)
 	r, c = AbMat.Dims()
 	for i := 0; i < r; i++ {
 		res = append(res, AbMat.At(i, c-1))
 	}
-	return NewVector(res)
+	return NewDenseVector(res)
 }
