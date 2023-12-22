@@ -324,21 +324,3 @@ func Dot(v1, v2 Vector) Gf256 {
 	}
 	return acc
 }
-
-// Computes v_tr * A * v
-func ADot(A Matrix, v Vector) Gf256 {
-	r, c := A.Dims()
-	l := v.Len()
-	if r != c || c != l {
-		panic("wrong sizes for ADot product")
-	}
-
-	var acc Gf256 = 0
-	for i := 0; i < r; i++ {
-		for j := 0; j < c; j++ {
-			t := Mul(v.AtVec(i), v.AtVec(j))
-			Aij := A.At(i, j) ^ A.At(j, i)
-			acc ^= Mul(t, Aij)
-		}
-	}
-}
