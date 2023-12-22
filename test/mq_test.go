@@ -8,7 +8,7 @@ import (
 	"sebastienhauri.ch/mqt/math"
 )
 
-func TestMQ(t *testing.T) {
+func TestMQR(t *testing.T) {
 	x_seed := []byte{0}
 	F_seed := []byte{1}
 	x := crypto.Nrand256(constants.N, x_seed)
