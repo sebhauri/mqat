@@ -1,7 +1,7 @@
 package math
 
 func IsNonZero(a uint8) bool {
-	a8 := a
+	a8 := uint(a)
 	r := 0 - a8
 	r >>= 8
 	return (r & 1) == 1
