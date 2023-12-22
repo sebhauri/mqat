@@ -25,7 +25,7 @@ func MQR(R []uint8, x []uint8, m int) []uint8 {
 }
 
 func MQP(P1i, P2i, P3i, x []uint8, m int) []uint8 {
-	fx := make([]uint8, 0)
+	fx := make([]uint8, m)
 	n := len(x)
 
 	vec := NewVector(x)
@@ -34,38 +34,81 @@ func MQP(P1i, P2i, P3i, x []uint8, m int) []uint8 {
 	lenP2 := (n - m) * m
 	lenP3 := m * (m + 1) / 2
 
+	P1s := make([]UpperTriangle, 0)
+	P2s := make([]*Dense, 0)
+	P3s := make([]UpperTriangle, 0)
 	for k := 0; k < m; k++ {
-		var acc uint8 = 0
-		P1 := NewUpperTriangle(
-			NewDenseMatrix(
-				n-m, n-m,
-				P1i[k*lenP1:(k+1)*lenP1],
+		P1s = append(P1s,
+			NewUpperTriangle(
+				NewDenseMatrix(
+					n-m, n-m,
+					P1i[k*lenP1:(k+1)*lenP1],
+				),
 			),
 		)
-		P2 := NewDenseMatrix(
-			n-m, m, P2i[k*lenP2:(k+1)*lenP2],
-		)
-		P3 := NewUpperTriangle(
+		P2s = append(P2s,
 			NewDenseMatrix(
-				m, m, P3i[k*lenP3:(k+1)*lenP3],
+				n-m, m, P2i[k*lenP2:(k+1)*lenP2],
 			),
 		)
-		for i := 0; i < n; i++ {
-			for j := i; j < n; j++ {
-				t := Mul(vec.At(i, 0), vec.At(j, 0))
+		P3s = append(P3s,
+			NewUpperTriangle(
+				NewDenseMatrix(
+					m, m, P3i[k*lenP3:(k+1)*lenP3],
+				),
+			),
+		)
+	}
+
+	for i := 0; i < n; i++ {
+		for j := i; j < n; j++ {
+			t := Mul(vec.At(i, 0), vec.At(j, 0))
+			for k := 0; k < m; k++ {
 				if j < n-m {
-					acc ^= Mul(t, P1.At(i, j))
+					fx[k] ^= Mul(t, P1s[k].At(i, j))
 				} else {
 					if i < n-m {
-						acc ^= Mul(t, P2.At(i, j-n+m))
+						fx[k] ^= Mul(t, P2s[k].At(i, j-n+m))
 					} else {
-						acc ^= Mul(t, P3.At(i-n+m, j-n+m))
+						fx[k] ^= Mul(t, P3s[k].At(i-n+m, j-n+m))
 					}
 				}
 			}
 		}
-		fx = append(fx, acc)
 	}
+
+	// for k := 0; k < m; k++ {
+	// 	var acc uint8 = 0
+	// 	P1 := NewUpperTriangle(
+	// 		NewDenseMatrix(
+	// 			n-m, n-m,
+	// 			P1i[k*lenP1:(k+1)*lenP1],
+	// 		),
+	// 	)
+	// 	P2 := NewDenseMatrix(
+	// 		n-m, m, P2i[k*lenP2:(k+1)*lenP2],
+	// 	)
+	// 	P3 := NewUpperTriangle(
+	// 		NewDenseMatrix(
+	// 			m, m, P3i[k*lenP3:(k+1)*lenP3],
+	// 		),
+	// 	)
+	// 	for i := 0; i < n; i++ {
+	// 		for j := i; j < n; j++ {
+	// 			t := Mul(vec.At(i, 0), vec.At(j, 0))
+	// 			if j < n-m {
+	// 				acc ^= Mul(t, P1.At(i, j))
+	// 			} else {
+	// 				if i < n-m {
+	// 					acc ^= Mul(t, P2.At(i, j-n+m))
+	// 				} else {
+	// 					acc ^= Mul(t, P3.At(i-n+m, j-n+m))
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	fx = append(fx, acc)
+	// }
 	return fx
 }
 
