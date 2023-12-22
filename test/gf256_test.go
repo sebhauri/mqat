@@ -7,8 +7,8 @@ import (
 )
 
 func TestMul(t *testing.T) {
-	var a uint8 = 76
-	var b uint8 = 85
+	var a math.Gf256 = 76
+	var b math.Gf256 = 85
 	t.Logf("a=%d, b=%d", a, b)
 	c := math.Mul(a, b)
 
@@ -20,7 +20,7 @@ func TestMul(t *testing.T) {
 
 func TestInverse(t *testing.T) {
 	for i := 1; i < 256; i++ {
-		a := uint8(i)
+		a := math.Gf256(i)
 		b := math.Inv(a)
 		if math.Mul(a, b) != 1 {
 			t.Errorf("%d * %d != 1", a, b)

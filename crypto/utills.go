@@ -5,13 +5,14 @@ import (
 
 	"golang.org/x/crypto/sha3"
 	constants "sebastienhauri.ch/mqt/const"
+	"sebastienhauri.ch/mqt/math"
 )
 
 func H(data []byte) [constants.HASH_BYTES]byte {
 	return sha3.Sum256(bytes.Clone(data))
 }
 
-func Nrand256(n int, seed []byte) []uint8 {
+func Nrand256(n int, seed []byte) []math.Gf256 {
 	if n <= 0 {
 		return nil
 	}
@@ -20,7 +21,7 @@ func Nrand256(n int, seed []byte) []uint8 {
 	return out
 }
 
-func Nrand128(n int, seed []byte) []uint8 {
+func Nrand128(n int, seed []byte) []math.Gf256 {
 	if n <= 0 {
 		return nil
 	}

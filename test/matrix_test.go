@@ -1,7 +1,6 @@
 package test
 
 import (
-	"bytes"
 	"testing"
 
 	"sebastienhauri.ch/mqt/crypto"
@@ -48,10 +47,10 @@ func TestDims(t *testing.T) {
 }
 
 func TestMatTranspose(t *testing.T) {
-	inp := math.NewDenseMatrix(2, 3, []uint8{
+	inp := math.NewDenseMatrix(2, 3, []math.Gf256{
 		1, 2, 3,
 		4, 5, 6})
-	exp := math.NewDenseMatrix(3, 2, []uint8{
+	exp := math.NewDenseMatrix(3, 2, []math.Gf256{
 		1, 4,
 		2, 5,
 		3, 6})
@@ -62,11 +61,11 @@ func TestMatTranspose(t *testing.T) {
 }
 
 func TestMatUpperTriangle(t *testing.T) {
-	inp1 := math.NewDenseMatrix(3, 3, []uint8{
+	inp1 := math.NewDenseMatrix(3, 3, []math.Gf256{
 		1, 2, 3,
 		0, 4, 5,
 		0, 0, 6})
-	inp2 := math.NewDenseMatrix(3, 3, []uint8{
+	inp2 := math.NewDenseMatrix(3, 3, []math.Gf256{
 		1, 2, 3,
 		4, 5,
 		6})
@@ -92,15 +91,15 @@ func TestMatUpperTriangle(t *testing.T) {
 }
 
 func TestMatAdd(t *testing.T) {
-	inp := math.NewDenseMatrix(2, 3, []uint8{
+	inp := math.NewDenseMatrix(2, 3, []math.Gf256{
 		1, 2, 3,
 		4, 5, 6,
 	})
-	sub := math.NewDenseMatrix(2, 3, []uint8{
+	sub := math.NewDenseMatrix(2, 3, []math.Gf256{
 		2, 3, 4,
 		5, 6, 7,
 	})
-	exp := math.NewDenseMatrix(2, 3, []uint8{
+	exp := math.NewDenseMatrix(2, 3, []math.Gf256{
 		3, 1, 7,
 		1, 3, 1,
 	})
@@ -111,16 +110,16 @@ func TestMatAdd(t *testing.T) {
 }
 
 func TestMatMul(t *testing.T) {
-	inp := math.NewDenseMatrix(2, 3, []uint8{
+	inp := math.NewDenseMatrix(2, 3, []math.Gf256{
 		127, 22, 30,
 		48, 54, 69,
 	})
-	sub := math.NewDenseMatrix(3, 2, []uint8{
+	sub := math.NewDenseMatrix(3, 2, []math.Gf256{
 		29, 31,
 		111, 52,
 		240, 7,
 	})
-	exp := math.NewDenseMatrix(2, 2, []uint8{
+	exp := math.NewDenseMatrix(2, 2, []math.Gf256{
 		97, 141,
 		149, 233,
 	})
@@ -131,7 +130,7 @@ func TestMatMul(t *testing.T) {
 }
 
 func TestSolve(t *testing.T) {
-	A := []uint8{
+	A := []math.Gf256{
 		1, 2, 3, 7,
 		4, 57, 145, 9,
 		132, 35, 87, 101,
@@ -141,22 +140,20 @@ func TestSolve(t *testing.T) {
 	t.Log("x =", x)
 
 	matA := math.NewDenseMatrix(4, 4, A)
-	vecX := math.NewVector(x)
+	vecX := math.NewDenseVector(4, x)
 
-	b := math.MulMat(matA, vecX)
+	b := math.MulVec(matA, vecX)
 	if b == nil {
 		return
 	}
-	t.Log("b =", b.Data)
-	vecB := math.NewVector(b.Data)
 
-	xPrime := math.Solve(matA, vecB)
-	if xPrime.Data == nil {
+	xPrime := math.Solve(matA, b)
+	if xPrime == nil {
 		t.Log("x' is nil")
 	}
 	t.Log("x' =", xPrime)
 
-	if !bytes.Equal(x, xPrime.Data) {
+	if matrixEqual(vecX, xPrime) {
 		t.Error("results dont match.")
 	}
 }

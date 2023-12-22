@@ -138,7 +138,7 @@ func (u UpperTriangle) Set(i, j int, v Gf256) {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-func MulMat(A, B Matrix) *DenseM {
+func MulMat(A, B Matrix) Matrix {
 	rowsA, colsA := A.Dims()
 	rowsB, colsB := B.Dims()
 	if colsA != rowsB {
@@ -159,7 +159,7 @@ func MulMat(A, B Matrix) *DenseM {
 	return res
 }
 
-func MulVec(A Matrix, b Vector) *DenseV {
+func MulVec(A Matrix, b Vector) Vector {
 	r, c := A.Dims()
 	l := b.Len()
 	if c != l {
@@ -182,7 +182,7 @@ func MulVec(A Matrix, b Vector) *DenseV {
 	return res
 }
 
-func AddMat(A, B Matrix) *DenseM {
+func AddMat(A, B Matrix) Matrix {
 	rowsA, colsA := A.Dims()
 	rowsB, colsB := B.Dims()
 	if rowsA != rowsB || colsA != colsB {
@@ -199,7 +199,7 @@ func AddMat(A, B Matrix) *DenseM {
 	return res
 }
 
-func AddVec(a, b Vector) *DenseV {
+func AddVec(a, b Vector) Vector {
 	la := a.Len()
 	lb := b.Len()
 	if la != lb {
@@ -214,7 +214,7 @@ func AddVec(a, b Vector) *DenseV {
 	return res
 }
 
-func ScaleMat(M Matrix, v Gf256) *DenseM {
+func ScaleMat(M Matrix, v Gf256) Matrix {
 	rows, cols := M.Dims()
 	res := NewDenseMatrix(rows, cols, nil)
 	for i := 0; i < rows; i++ {
@@ -226,7 +226,7 @@ func ScaleMat(M Matrix, v Gf256) *DenseM {
 	return res
 }
 
-func ScaleVec(v Vector, f Gf256) *DenseV {
+func ScaleVec(v Vector, f Gf256) Vector {
 	l := v.Len()
 	res := NewDenseVector(l, nil)
 	for i := 0; i < l; i++ {
@@ -235,7 +235,7 @@ func ScaleVec(v Vector, f Gf256) *DenseV {
 	return res
 }
 
-func AppendCol(M Matrix, v Vector) *DenseM {
+func AppendCol(M Matrix, v Vector) Matrix {
 	r, c := M.Dims()
 	l := v.Len()
 	if r != c {
@@ -252,7 +252,7 @@ func AppendCol(M Matrix, v Vector) *DenseM {
 	return res
 }
 
-func GetCol(i int, M Matrix) *DenseV {
+func GetCol(i int, M Matrix) Vector {
 	r, c := M.Dims()
 	if i >= c {
 		return nil
@@ -265,7 +265,7 @@ func GetCol(i int, M Matrix) *DenseV {
 	return res
 }
 
-func Solve(A Matrix, b Vector) *DenseV {
+func Solve(A Matrix, b Vector) Vector {
 	r, c := A.Dims()
 	l := b.Len()
 	if r != c {
@@ -307,8 +307,7 @@ func Solve(A Matrix, b Vector) *DenseV {
 		}
 	}
 
-	res := GetCol(c, Ab)
-	return res
+	return GetCol(c, Ab)
 }
 
 func Dot(v1, v2 Vector) Gf256 {

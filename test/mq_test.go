@@ -9,24 +9,36 @@ import (
 )
 
 func TestMQR(t *testing.T) {
+	n := constants.N
+	m := constants.M
+	filen := n * (n + 1) / 2
+
 	x_seed := []byte{0}
 	F_seed := []byte{1}
-	x := crypto.Nrand256(constants.N, x_seed)
-	F := crypto.Nrand128(constants.FLEN, F_seed)
-	fx := math.MQR(F, x, constants.M)
+	x := crypto.Nrand256(n, x_seed)
+	vecX := math.NewDenseVector(len(x), x)
+	F := crypto.Nrand128(m*filen, F_seed)
+	R := make([]math.Matrix, 0)
+	for i := 0; i < m; i++ {
+		M := math.NewUpperTriangle(
+			math.NewDenseMatrix(n, n, F[i*filen:(i+1)*filen]),
+		)
+		R = append(R, M)
+	}
+
+	fx := math.MQR(R, vecX, m)
 	t.Logf("fx=%v", fx)
 
-	x2 := make([]uint8, constants.N)
-	fx2 := make([]uint8, constants.M)
-	F2 := make([]uint8, constants.FLEN)
-	for i := 0; i < constants.N; i++ {
+	x2 := make([]math.Gf256, n)
+	fx2 := make([]math.Gf256, m)
+	F2 := make([]math.Gf256, m*filen)
+	for i := 0; i < n; i++ {
 		x2[i] = x[i]
 	}
-	for i := 0; i < constants.FLEN; i++ {
+	for i := 0; i < m*filen; i++ {
 		F2[i] = F[i]
 	}
-	filen := constants.N * (constants.N + 1) / 2
-	xij := make([]uint8, filen)
+	xij := make([]math.Gf256, filen)
 	k := 0
 	for i := 0; i < constants.N && k < filen; i++ {
 		for j := i; j < constants.N && k < filen; j++ {
@@ -39,7 +51,7 @@ func TestMQR(t *testing.T) {
 		return
 	}
 	for i := 0; i < constants.M; i++ {
-		var fxi uint8 = 0
+		var fxi math.Gf256 = 0
 		for j := 0; j < filen; j++ {
 			fxi ^= math.Mul(xij[j], F2[i*(filen)+j])
 		}
@@ -48,7 +60,7 @@ func TestMQR(t *testing.T) {
 	t.Logf("fx'=%v", fx2)
 
 	for i, v := range fx2 {
-		if v != fx[i] {
+		if v != fx.AtVec(i) {
 			t.Errorf("MQ does return wrong result.")
 			return
 		}
