@@ -127,7 +127,7 @@ func (mqdss *MQDSS) Sign(message []uint8, sk *MQDSSSecretKey) []byte {
 		}
 	}
 	sigma1 := append(t1, e1...)
-	h1 := sha3.NewShake128()
+	h1 := sha3.NewShake256()
 	tohash := append(h0, sigma1...)
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
@@ -167,7 +167,7 @@ func (mqdss *MQDSS) Verify(message []uint8, sig []byte, pk *MQDSSPublicKey) bool
 
 	h0 := append(D[:], sigma0...)
 	alphas := Nrand256(mqdss.R, h0)
-	h1 := sha3.NewShake128()
+	h1 := sha3.NewShake256()
 	tohash = append(h0, sigma1...)
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
