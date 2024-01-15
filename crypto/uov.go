@@ -57,7 +57,7 @@ func (uov *UOV) KeyGen() (*UOVSecretKey, *UOVPublicKey) {
 	uov_pk.P1i = Pi1
 	uov_pk.P2i = Pi2
 	uov_pk.P3i = Pi3
-	uov_sk.Pk = uov_pk
+	uov_sk.P1i = Pi1
 	return uov_sk, uov_pk
 }
 
@@ -85,7 +85,7 @@ func (uov *UOV) Sign(message []uint8, sk *UOVSecretKey) []uint8 {
 		for i := 0; i < uov.M; i++ {
 			P1i := math.NewUpperTriangle(
 				math.NewDenseMatrix(uov.N-uov.M, uov.N-uov.M,
-					sk.Pk.P1i[i*lenP1i:(i+1)*lenP1i]))
+					sk.P1i[i*lenP1i:(i+1)*lenP1i]))
 			res := math.MulMat(math.MulMat(vec_t, P1i), vec)
 			if len(res.Data) != 1 {
 				return nil

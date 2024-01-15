@@ -39,7 +39,7 @@ type UOVSecretKey struct {
 	Seed []byte
 	O    []uint8
 	Si   []uint8
-	Pk   *UOVPublicKey
+	P1i  []uint8
 }
 
 type UOVPublicKey struct {
