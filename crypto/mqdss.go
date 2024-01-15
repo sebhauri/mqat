@@ -78,6 +78,7 @@ func (mqdss *MQDSS) Sign(message []uint8, sk *MQDSSSecretKey) []byte {
 	if err != nil {
 		return nil
 	}
+	seed = append(seed, D[:]...)
 	r0t0e0 := Nrand256((2*mqdss.N+mqdss.M)*mqdss.R, seed)
 	r0 := r0t0e0[:mqdss.R*mqdss.N]
 	r1 := make([]uint8, len(r0))
@@ -128,7 +129,8 @@ func (mqdss *MQDSS) Sign(message []uint8, sk *MQDSSSecretKey) []byte {
 	}
 	sigma1 := append(t1, e1...)
 	h1 := sha3.NewShake256()
-	tohash := append(h0, sigma1...)
+	tohash := append(h0, alphas...)
+	tohash = append(tohash, sigma1...)
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
 	sigma2 := make([]byte, 0)
@@ -168,7 +170,8 @@ func (mqdss *MQDSS) Verify(message []uint8, sig []byte, pk *MQDSSPublicKey) bool
 	h0 := append(D[:], sigma0...)
 	alphas := Nrand256(mqdss.R, h0)
 	h1 := sha3.NewShake256()
-	tohash = append(h0, sigma1...)
+	tohash = append(h0, alphas...)
+	tohash = append(tohash, sigma1...)
 	h1.Write(tohash)
 	shakeBlock := make([]byte, h1.BlockSize())
 	c := make([]byte, 0)
