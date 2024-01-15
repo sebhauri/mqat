@@ -62,7 +62,7 @@ func main() {
 	println("Benchmarking verification..")
 	start = time.Now()
 	for i := 0; i < constants.MEASURE_ROUNDS; i++ {
-		bool := mqat.Verify(mqat_sk, token)
+		bool := mqat.Verify(mqat_pk, token)
 		if !bool {
 			println("\t Verification failed at iteration", i)
 		}

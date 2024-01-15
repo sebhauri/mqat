@@ -12,8 +12,7 @@ type MQAT struct {
 }
 
 type MQATSecretKey struct {
-	uov_sk          *UOVSecretKey
-	seed_random_sys []byte
+	uov_sk *UOVSecretKey
 }
 
 type MQATPublicKey struct {

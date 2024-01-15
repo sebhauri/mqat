@@ -51,7 +51,6 @@ func (mqat *MQAT) KeyGen() (*MQATSecretKey, *MQATPublicKey) {
 	}
 
 	sk.uov_sk = uov_sk
-	sk.seed_random_sys = random_sys_seed
 	pk.seed_random_sys = random_sys_seed
 	pk.uov_pk = uov_pk
 
@@ -138,11 +137,11 @@ func (mqat *MQAT) User1(
 	return mqat_token
 }
 
-func (mqat *MQAT) Verify(sk *MQATSecretKey, token *MQATToken) bool {
+func (mqat *MQAT) Verify(pk *MQATPublicKey, token *MQATToken) bool {
 	w_seed := append(token.Token, token.Salt...)
 	w := Nrand128(mqat.M, w_seed)
-	R := Nrand128(math.Flen(mqat.M, mqat.M), sk.seed_random_sys)
-	_, mqdss_pk := mqat.mqdss.KeyPair(sk.uov_sk.Pk.P1i, sk.uov_sk.Pk.P2i, sk.uov_sk.Pk.P3i, R, nil, w)
+	R := Nrand128(math.Flen(mqat.M, mqat.M), pk.seed_random_sys)
+	_, mqdss_pk := mqat.mqdss.KeyPair(pk.uov_pk.P1i, pk.uov_pk.P2i, pk.uov_pk.P3i, R, nil, w)
 	return mqat.mqdss.Verify(w, token.MQDSSSignature, mqdss_pk)
 }
 
