@@ -74,7 +74,7 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) ([]byte, []byte, []uint8, []uint8) {
 	w_seed := append(t, salt...)
 	w := Nrand128(mqat.M, w_seed)
 
-	z_star_seed := make([]byte, 2*constants.LAMBDA)
+	z_star_seed := make([]byte, constants.LAMBDA/8)
 	_, err = rand.Read(z_star_seed)
 	if err != nil {
 		logrus.Error("Could not sample z* randomness")
