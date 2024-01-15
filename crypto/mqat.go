@@ -121,7 +121,6 @@ func (mqat *MQAT) User1(
 	w_prime := math.MQ(P1i, P2i, P3i, R, x, mqat.M, mqat.N)
 	for i := 0; i < mqat.M; i++ {
 		if w[i] != w_prime[i] {
-			println("HEY!!!!!")
 			return nil
 		}
 	}
