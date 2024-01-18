@@ -11,11 +11,11 @@ const SALT_LEN = LAMBDA
 const HASH_BYTES = 32
 
 // UOV
-const UOV_PK_SEED_LEN = 128
-const UOV_SK_SEED_LEN = 256
+const UOV_PK_SEED_LEN = LAMBDA
+const UOV_SK_SEED_LEN = 2 * LAMBDA
 
 // MQDSS
-const MQDSS_PK_SEED_LEN = 128
-const MQDSS_SK_SEED_LEN = 256
+const MQDSS_PK_SEED_LEN = LAMBDA
+const MQDSS_SK_SEED_LEN = 2 * LAMBDA
 const MQDSS_ROUNDS = 156
 const FLEN = M * (N * (N + 1) / 2)

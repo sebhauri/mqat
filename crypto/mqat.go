@@ -72,15 +72,15 @@ func (mqat *MQAT) User0(pk *MQATPublicKey) ([]byte, []byte, []uint8, []uint8) {
 	}
 
 	w_seed := append(t, salt...)
-	w := Nrand128(mqat.M, w_seed)
+	w := Nrand256(mqat.M, w_seed)
 
-	z_star_seed := make([]byte, constants.LAMBDA/8)
+	z_star_seed := make([]byte, 2*constants.LAMBDA/8)
 	_, err = rand.Read(z_star_seed)
 	if err != nil {
 		logrus.Error("Could not sample z* randomness")
 		return nil, nil, nil, nil
 	}
-	z_star := Nrand128(mqat.M, z_star_seed)
+	z_star := Nrand256(mqat.M, z_star_seed)
 	if z_star == nil {
 		logrus.Error("Could not sample z*")
 	}
@@ -107,7 +107,7 @@ func (mqat *MQAT) User1(
 	resp []uint8,
 ) *MQATToken {
 	w_seed := append(t, salt...)
-	w := Nrand128(mqat.M, w_seed)
+	w := Nrand256(mqat.M, w_seed)
 
 	P1i := pk.uov_pk.P1i
 	P2i := pk.uov_pk.P2i
@@ -138,7 +138,7 @@ func (mqat *MQAT) User1(
 
 func (mqat *MQAT) Verify(pk *MQATPublicKey, token *MQATToken) bool {
 	w_seed := append(token.Token, token.Salt...)
-	w := Nrand128(mqat.M, w_seed)
+	w := Nrand256(mqat.M, w_seed)
 	R := Nrand128(math.Flen(mqat.M, mqat.M), pk.seed_random_sys)
 	_, mqdss_pk := mqat.mqdss.KeyPair(pk.uov_pk.P1i, pk.uov_pk.P2i, pk.uov_pk.P3i, R, nil, w)
 	return mqat.mqdss.Verify(w, token.MQDSSSignature, mqdss_pk)
