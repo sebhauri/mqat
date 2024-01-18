@@ -22,7 +22,6 @@ type MQATPublicKey struct {
 
 type MQATToken struct {
 	Token          []byte
-	Salt           []byte
 	MQDSSSignature []byte
 }
 

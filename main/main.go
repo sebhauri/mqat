@@ -35,12 +35,12 @@ func main() {
 	fmt.Printf("\t Mean time per key generation: %.3f milliseconds.\n\n", float64(end.Milliseconds())/constants.MEASURE_ROUNDS)
 
 	var token *crypto.MQATToken
-	var t, salt []byte
+	var t []byte
 	var z_star, query, resp []uint8
 	println("Benchmarking interactive issuance..")
 	start = time.Now()
 	for i := 0; i < constants.MEASURE_ROUNDS; i++ {
-		t, salt, z_star, query = mqat.User0(mqat_pk)
+		t, z_star, query = mqat.User0(mqat_pk)
 		if query == nil {
 			println("\t Query is nil at iteration", i)
 			continue
@@ -50,7 +50,7 @@ func main() {
 			println("\t Response is nil at iteration", i)
 			continue
 		}
-		token = mqat.User1(mqat_pk, t, salt, z_star, resp)
+		token = mqat.User1(mqat_pk, t, z_star, resp)
 		if token == nil {
 			println("\t Token is nil at iteration", i)
 		}
