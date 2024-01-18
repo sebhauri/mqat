@@ -1,5 +1,7 @@
 package math
 
+import constants "sebastienhauri.ch/mqt/const"
+
 func MQ(P1i, P2i, P3i, R, x []uint8, m, n int) []uint8 {
 	x1 := x[:n]
 	x2 := x[n:]
@@ -15,17 +17,28 @@ func MQ(P1i, P2i, P3i, R, x []uint8, m, n int) []uint8 {
 }
 
 func MQR(R []uint8, x []uint8, m int) []uint8 {
-	fx := make([]uint8, m)
+	h_prime := make([]uint8, constants.Q*m)
 	n := len(x)
-	xij := quad(x)
-	for i := 0; i < m; i++ {
-		fx[i] = mqi(R[Flen(i, n):Flen(i+1, n)], xij)
+	for i := 0; i < n; i++ {
+		for j := i; j < n; j++ {
+			t := Mul(x[i], x[j])
+			for k := 0; k < m; k++ {
+				h_prime[int(t)*m+k] ^= R[Flen(k, n)+n*i+j-i*(i-1)/2-i]
+			}
+		}
 	}
-	return fx
+
+	h := h_prime[m : 2*m]
+	for t := 2; t < constants.Q; t++ {
+		for k := 0; k < m; k++ {
+			h[k] ^= Mul(uint8(t), h_prime[int(t)*m+k])
+		}
+	}
+	return h
 }
 
 func MQP(P1i, P2i, P3i, x []uint8, m int) []uint8 {
-	fx := make([]uint8, m)
+	h_prime := make([]uint8, constants.Q*m)
 	n := len(x)
 
 	vec := NewVector(x)
@@ -65,19 +78,25 @@ func MQP(P1i, P2i, P3i, x []uint8, m int) []uint8 {
 			t := Mul(vec.At(i, 0), vec.At(j, 0))
 			for k := 0; k < m; k++ {
 				if j < n-m {
-					fx[k] ^= Mul(t, P1s[k].At(i, j))
+					h_prime[int(t)*m+k] ^= P1s[k].At(i, j)
 				} else {
 					if i < n-m {
-						fx[k] ^= Mul(t, P2s[k].At(i, j-n+m))
+						h_prime[int(t)*m+k] ^= P2s[k].At(i, j-n+m)
 					} else {
-						fx[k] ^= Mul(t, P3s[k].At(i-n+m, j-n+m))
+						h_prime[int(t)*m+k] ^= P3s[k].At(i-n+m, j-n+m)
 					}
 				}
 			}
 		}
 	}
 
-	return fx
+	h := h_prime[m : 2*m]
+	for t := 2; t < constants.Q; t++ {
+		for k := 0; k < m; k++ {
+			h[k] ^= Mul(uint8(t), h_prime[int(t)*m+k])
+		}
+	}
+	return h
 }
 
 func G(P1i, P2i, P3i, R, x, y []uint8, m, n int) []uint8 {
@@ -101,32 +120,4 @@ func G(P1i, P2i, P3i, R, x, y []uint8, m, n int) []uint8 {
 
 func Flen(m, n int) int {
 	return m * n * (n + 1) / 2
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Helpers
-////////////////////////////////////////////////////////////////////////////////
-
-func mqi(Fi, xij []uint8) uint8 {
-	flen := len(Fi)
-	var fi uint8 = 0
-	for i := 0; i < flen; i++ {
-		fi ^= Mul(Fi[i], xij[i])
-	}
-	return fi
-}
-
-func quad(x []uint8) []uint8 {
-	n := len(x)
-	filen := n * (n + 1) / 2
-	xij := make([]uint8, filen)
-	k := 0
-	for i := 0; i < n && k < filen; i++ {
-		for j := i; j < n && k < filen; j++ {
-			xijk := Mul(x[i], x[j])
-			xij[k] = xijk
-			k++
-		}
-	}
-	return xij
 }
