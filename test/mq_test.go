@@ -1,35 +1,45 @@
 package test
 
 import (
+	"crypto/rand"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	constants "sebastienhauri.ch/mqt/const"
 	"sebastienhauri.ch/mqt/crypto"
 	"sebastienhauri.ch/mqt/math"
 )
 
 func TestMQR(t *testing.T) {
-	x_seed := []byte{0}
-	F_seed := []byte{1}
-	x := crypto.Nrand256(constants.N, x_seed)
-	F := crypto.Nrand128(constants.FLEN, F_seed)
+	n := constants.N + constants.M
+	m := constants.M
+	seed := make([]byte, 2*constants.LAMBDA)
+	_, err := rand.Read(seed)
+	if err != nil {
+		logrus.Error("Could not sample random system seed")
+		return
+	}
+	x_seed := seed[:constants.LAMBDA]
+	F_seed := seed[constants.LAMBDA:]
+	x := crypto.Nrand256(n, x_seed)
+	F := crypto.Nrand128(math.Flen(m, n), F_seed)
 	fx := math.MQR(F, x, constants.M)
-	t.Logf("fx=%v", fx)
+	// t.Logf("fx=%v", fx)
 
-	x2 := make([]uint8, constants.N)
-	fx2 := make([]uint8, constants.M)
-	F2 := make([]uint8, constants.FLEN)
-	for i := 0; i < constants.N; i++ {
+	x2 := make([]uint8, n)
+	fx2 := make([]uint8, m)
+	F2 := make([]uint8, math.Flen(m, n))
+	for i := 0; i < n; i++ {
 		x2[i] = x[i]
 	}
-	for i := 0; i < constants.FLEN; i++ {
+	for i := 0; i < math.Flen(m, n); i++ {
 		F2[i] = F[i]
 	}
-	filen := constants.N * (constants.N + 1) / 2
+	filen := n * (n + 1) / 2
 	xij := make([]uint8, filen)
 	k := 0
-	for i := 0; i < constants.N && k < filen; i++ {
-		for j := i; j < constants.N && k < filen; j++ {
+	for i := 0; i < n && k < filen; i++ {
+		for j := i; j < n && k < filen; j++ {
 			xij[k] = math.Mul(x2[i], x2[j])
 			k++
 		}
@@ -38,14 +48,14 @@ func TestMQR(t *testing.T) {
 		t.Errorf("xijxi does not have good length.")
 		return
 	}
-	for i := 0; i < constants.M; i++ {
+	for i := 0; i < m; i++ {
 		var fxi uint8 = 0
 		for j := 0; j < filen; j++ {
 			fxi ^= math.Mul(xij[j], F2[i*(filen)+j])
 		}
 		fx2[i] = fxi
 	}
-	t.Logf("fx'=%v", fx2)
+	// t.Logf("fx'=%v", fx2)
 
 	for i, v := range fx2 {
 		if v != fx[i] {
