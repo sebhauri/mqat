@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	constants "sebastienhauri.ch/mqt/const"
-	"sebastienhauri.ch/mqt/crypto"
+	constants "mqat/const"
+	"mqat/crypto"
 )
 
 func main() {

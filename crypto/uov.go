@@ -3,8 +3,7 @@ package crypto
 import (
 	"bytes"
 	"crypto/rand"
-
-	"sebastienhauri.ch/mqt/math"
+	"mqat/math"
 )
 
 func NewUOV(m, n, pk_seed_len, sk_seed_len int) *UOV {

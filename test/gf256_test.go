@@ -1,9 +1,8 @@
 package test
 
 import (
+	"mqat/math"
 	"testing"
-
-	"sebastienhauri.ch/mqt/math"
 )
 
 func TestMul(t *testing.T) {

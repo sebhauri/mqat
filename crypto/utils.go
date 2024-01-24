@@ -2,9 +2,9 @@ package crypto
 
 import (
 	"bytes"
+	constants "mqat/const"
 
 	"golang.org/x/crypto/sha3"
-	constants "sebastienhauri.ch/mqt/const"
 )
 
 func H(data []byte) [constants.HASH_BYTES]byte {

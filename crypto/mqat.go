@@ -2,10 +2,10 @@ package crypto
 
 import (
 	"crypto/rand"
+	constants "mqat/const"
+	"mqat/math"
 
 	"github.com/sirupsen/logrus"
-	constants "sebastienhauri.ch/mqt/const"
-	"sebastienhauri.ch/mqt/math"
 )
 
 func NewMQAT(

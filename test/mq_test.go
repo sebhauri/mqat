@@ -2,12 +2,12 @@ package test
 
 import (
 	"crypto/rand"
+	constants "mqat/const"
+	"mqat/crypto"
+	"mqat/math"
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	constants "sebastienhauri.ch/mqt/const"
-	"sebastienhauri.ch/mqt/crypto"
-	"sebastienhauri.ch/mqt/math"
 )
 
 func TestMQR(t *testing.T) {

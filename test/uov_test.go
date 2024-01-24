@@ -2,11 +2,10 @@ package test
 
 import (
 	"bytes"
+	constants "mqat/const"
+	"mqat/crypto"
+	"mqat/math"
 	"testing"
-
-	constants "sebastienhauri.ch/mqt/const"
-	"sebastienhauri.ch/mqt/crypto"
-	"sebastienhauri.ch/mqt/math"
 )
 
 func TestUOVKeygen(t *testing.T) {

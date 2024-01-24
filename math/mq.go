@@ -1,6 +1,6 @@
 package math
 
-import constants "sebastienhauri.ch/mqt/const"
+import constants "mqat/const"
 
 func MQ(P1i, P2i, P3i, R, x []uint8, m, n int) []uint8 {
 	x1 := x[:n]

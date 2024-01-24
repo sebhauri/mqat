@@ -2,10 +2,9 @@ package test
 
 import (
 	"bytes"
+	"mqat/crypto"
+	"mqat/math"
 	"testing"
-
-	"sebastienhauri.ch/mqt/crypto"
-	"sebastienhauri.ch/mqt/math"
 )
 
 func matrixEqual(A, B math.Matrix) bool {

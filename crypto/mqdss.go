@@ -3,10 +3,10 @@ package crypto
 import (
 	"bytes"
 	"crypto/rand"
+	constants "mqat/const"
+	"mqat/math"
 
 	"golang.org/x/crypto/sha3"
-	constants "sebastienhauri.ch/mqt/const"
-	"sebastienhauri.ch/mqt/math"
 )
 
 func NewMQDSS(m, n, r, pk_seed_len, sk_seed_len int) *MQDSS {

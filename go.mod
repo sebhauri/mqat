@@ -1,4 +1,4 @@
-module sebastienhauri.ch/mqt
+module mqat
 
 go 1.21.3
 
