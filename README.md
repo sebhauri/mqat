@@ -2,7 +2,7 @@
 
 Go implementation of multivariate quadratic anonymous tokens.
 
-⚠️ This implementation was made in the context of a proof-of-concept for a master thesis and is not ready for use in production; use it with caution. ⚠️
+⚠️ This implementation was made in the context of a proof-of-concept and is not ready for use in production; use it with caution. ⚠️
 
 ## Overview
 
